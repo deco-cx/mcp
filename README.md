@@ -27,6 +27,8 @@ const envPort = Deno.env.get("PORT");
 
 // Add MCP server middleware
 app.use("/*", mcpServer(deco));
+// optionally you can select tools
+// app.use("/*", mcpServer<Manifest>(deco, ["site/loaders/helloWorld.ts"])); // only hello world will be available
 
 // Handle all routes with Deco
 app.all("/*", async (c) => c.res = await deco.fetch(c.req.raw));
@@ -38,8 +40,7 @@ Deno.serve({
 });
 ```
 
-2. If you're a fresh-based site
-// in your fresh.config.ts
+2. If you're a fresh-based site // in your fresh.config.ts
 
 ```typescript
 import { defineConfig } from "$fresh/server.ts";

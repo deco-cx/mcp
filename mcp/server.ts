@@ -22,6 +22,7 @@ const RESOLVABLE_DEFINITION = "#/definitions/Resolvable";
 
 function setupMcpServer<TManifest extends AppManifest>(
   deco: Deco<TManifest>,
+  selected?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>,
 ) {
   const mcp = new McpServer({
     name: `deco-site-${context.site ?? Deno.env.get("DECO_SITE_NAME")}`,
@@ -32,7 +33,7 @@ function setupMcpServer<TManifest extends AppManifest>(
     },
   });
 
-  registerTools(mcp, deco);
+  registerTools(mcp, deco, selected);
 
   // Store active SSE connections
   const transports = new Map<string, SSEServerTransport>();
@@ -43,6 +44,7 @@ function setupMcpServer<TManifest extends AppManifest>(
 function registerTools<TManifest extends AppManifest>(
   mcp: McpServer,
   deco: Deco<TManifest>,
+  selected?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>,
 ) {
   const getTools = async () => {
     const meta = await deco.meta();
@@ -63,6 +65,11 @@ function registerTools<TManifest extends AppManifest>(
         const resolveType =
           (funcDefinition.properties?.__resolveType as { default: string })
             .default;
+
+        if (
+          selected && !selected.includes(resolveType as typeof selected[number])
+        ) return;
+
         const props = funcDefinition.allOf ?? [];
         const propsSchema = props[0];
         const ref = (propsSchema as JSONSchema7)?.$ref;
@@ -101,6 +108,7 @@ function registerTools<TManifest extends AppManifest>(
   });
 
   mcp.server.setRequestHandler(CallToolRequestSchema, async (req) => {
+    console.log(req);
     try {
       const state = await deco.prepareState({
         req: {
@@ -128,8 +136,9 @@ function registerTools<TManifest extends AppManifest>(
 const MESSAGES_ENDPOINT = "/mcp/messages";
 export function mcpServer<TManifest extends AppManifest>(
   deco: Deco<TManifest>,
+  selected?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>,
 ): MiddlewareHandler {
-  const { mcp, transports } = setupMcpServer(deco);
+  const { mcp, transports } = setupMcpServer(deco, selected);
 
   return async (c: Context, next: Next) => {
     const path = new URL(c.req.url).pathname;
