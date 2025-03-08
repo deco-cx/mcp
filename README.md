@@ -45,11 +45,3 @@ the `PORT` environment variable.
 
 - Deno runtime
 - A Deco site with a valid manifest
-
-## License
-
-[Add your license information here]
-
-## Contributing
-
-[Add contribution guidelines if applicable]
