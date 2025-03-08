@@ -108,8 +108,9 @@ function registerTools<TManifest extends AppManifest>(
         },
       });
       const result = await deco.invoke(
-        req.params.name,
-        req.params.arguments,
+        req.params.name as `#${string}`,
+        // deno-lint-ignore no-explicit-any
+        req.params.arguments ?? {} as any,
         undefined,
         state,
       );
