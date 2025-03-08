@@ -13,6 +13,8 @@ deno add @deco/mcp
 
 Here's how to set up an MCP server with your Deco site:
 
+1. If you're using `https://github.com/deco-sites/mcp` as template
+
 ```typescript
 import { Deco } from "@deco/deco";
 import { Hono } from "@hono/hono";
@@ -33,6 +35,25 @@ app.all("/*", async (c) => c.res = await deco.fetch(c.req.raw));
 Deno.serve({
   handler: app.fetch,
   port: envPort ? +envPort : 8000,
+});
+```
+
+2. If you're a fresh-based site
+// in your fresh.config.ts
+
+```typescript
+import { defineConfig } from "$fresh/server.ts";
+import { plugins } from "deco/plugins/deco.ts";
+import manifest from "./manifest.gen.ts";
+
+export default defineConfig({
+  plugins: plugins({
+    manifest,
+    htmx: true,
+    useServer: (deco, hono) => {
+      hono.use("/*", mcpServer(deco as any)); // some type errors may occur
+    },
+  }),
 });
 ```
 
