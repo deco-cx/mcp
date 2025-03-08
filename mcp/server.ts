@@ -22,7 +22,7 @@ const RESOLVABLE_DEFINITION = "#/definitions/Resolvable";
 
 function setupMcpServer<TManifest extends AppManifest>(
   deco: Deco<TManifest>,
-  selected?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>,
+  options?: Options<TManifest>,
 ) {
   const mcp = new McpServer({
     name: `deco-site-${context.site ?? Deno.env.get("DECO_SITE_NAME")}`,
@@ -33,7 +33,7 @@ function setupMcpServer<TManifest extends AppManifest>(
     },
   });
 
-  registerTools(mcp, deco, selected);
+  registerTools(mcp, deco, options);
 
   // Store active SSE connections
   const transports = new Map<string, SSEServerTransport>();
@@ -41,10 +41,14 @@ function setupMcpServer<TManifest extends AppManifest>(
   return { mcp, transports };
 }
 
+export interface Options<TManifest extends AppManifest> {
+  include?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>;
+  exclude?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>;
+}
 function registerTools<TManifest extends AppManifest>(
   mcp: McpServer,
   deco: Deco<TManifest>,
-  selected?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>,
+  options?: Options<TManifest>,
 ) {
   const getTools = async () => {
     const meta = await deco.meta();
@@ -67,7 +71,17 @@ function registerTools<TManifest extends AppManifest>(
             .default;
 
         if (
-          selected && !selected.includes(resolveType as typeof selected[number])
+          options?.include &&
+          !options.include.includes(
+            resolveType as typeof options.include[number],
+          )
+        ) return;
+
+        if (
+          options?.exclude &&
+          options.exclude.includes(
+            resolveType as typeof options.exclude[number],
+          )
         ) return;
 
         const props = funcDefinition.allOf ?? [];
@@ -136,9 +150,9 @@ function registerTools<TManifest extends AppManifest>(
 const MESSAGES_ENDPOINT = "/mcp/messages";
 export function mcpServer<TManifest extends AppManifest>(
   deco: Deco<TManifest>,
-  selected?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>,
+  options?: Options<TManifest>,
 ): MiddlewareHandler {
-  const { mcp, transports } = setupMcpServer(deco, selected);
+  const { mcp, transports } = setupMcpServer(deco, options);
 
   return async (c: Context, next: Next) => {
     const path = new URL(c.req.url).pathname;
