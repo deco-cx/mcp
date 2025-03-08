@@ -18,6 +18,7 @@ const idFromDefinition = (definition: string) => {
   return id;
 };
 
+const IS_DEBUG = Deno.env.get("DEBUG") === "1";
 const RESOLVABLE_DEFINITION = "#/definitions/Resolvable";
 
 function setupMcpServer<TManifest extends AppManifest>(
@@ -122,7 +123,7 @@ function registerTools<TManifest extends AppManifest>(
   });
 
   mcp.server.setRequestHandler(CallToolRequestSchema, async (req) => {
-    console.log(req);
+    IS_DEBUG && console.log(req);
     try {
       const state = await deco.prepareState({
         req: {
