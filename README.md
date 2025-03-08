@@ -59,9 +59,10 @@ export default defineConfig({
 ```
 
 ## Configuration
+Add the MCP server as a SSE endpoint using the production domain: https://sites-mcp.decocdn.com/mcp/sse
 
-The server will run on port 8000 by default. You can override this by setting
-the `PORT` environment variable.
+
+<img width="1718" alt="image" src="https://github.com/user-attachments/assets/8a94dd3b-be41-48b5-98db-22ddae16391f" />
 
 ## Requirements
 
