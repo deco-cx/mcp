@@ -80,7 +80,8 @@ function registerTools<TManifest extends AppManifest>(
 
         return {
           name: resolveType,
-          description: funcDefinition.description ?? inputSchema?.description,
+          description: funcDefinition.description ?? inputSchema?.description ??
+            resolveType,
           inputSchema: inputSchema && "type" in inputSchema &&
               inputSchema.type === "object"
             ? inputSchema
