@@ -3,6 +3,7 @@ import {
   context,
   type Deco,
   type JSONSchema7,
+  type Schemas,
 } from "@deco/deco";
 import type { Context, MiddlewareHandler, Next } from "@hono/hono";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -53,6 +54,127 @@ interface RootSchema extends JSONSchema7 {
   outputSchema?: string;
 }
 
+// Add slugify helper function
+const slugify = (name: string) => {
+  return name.replace(/[./]/g, "-").replace(/[^a-zA-Z0-9_-]/g, "");
+};
+export interface Tool {
+  name: string;
+  resolveType: string;
+  description: string;
+  outputSchema: JSONSchema7;
+  inputSchema: JSONSchema7;
+}
+
+export const getTools = <TManifest extends AppManifest>(
+  toolNames: Map<string, string>,
+  schemas?: Schemas,
+  options?: Options<TManifest>,
+): Tool[] => {
+  if (!schemas) return [];
+
+  const loaders = schemas?.root.loaders ?? { anyOf: [] };
+  const actions = schemas?.root.actions ?? { anyOf: [] };
+  const availableLoaders = "anyOf" in loaders ? loaders.anyOf ?? [] : [];
+  const availableActions = "anyOf" in actions ? actions.anyOf ?? [] : [];
+
+  const tools = [...availableLoaders, ...availableActions].map(
+    (func) => {
+      func = func as RootSchema;
+      if (!func.$ref || func.$ref === RESOLVABLE_DEFINITION) return;
+      const funcDefinition = schemas.definitions[idFromDefinition(func.$ref)];
+      const resolveType =
+        (funcDefinition.properties?.__resolveType as { default: string })
+          .default;
+
+      if (
+        options?.include &&
+        !options.include.includes(
+          resolveType as typeof options.include[number],
+        )
+      ) return;
+
+      if (
+        options?.exclude &&
+        options.exclude.includes(
+          resolveType as typeof options.exclude[number],
+        )
+      ) return;
+
+      const getInputSchemaId = () => {
+        if ("inputSchema" in func) {
+          return func.inputSchema as string;
+        }
+        const props = funcDefinition.allOf ?? [];
+        const propsSchema = props[0];
+        const ref = (propsSchema as JSONSchema7)?.$ref;
+        return ref;
+      };
+
+      const ref = getInputSchemaId();
+      const rawInputSchema = ref
+        ? schemas.definitions[idFromDefinition(ref)]
+        : undefined;
+
+      // Dereference the input schema
+      const inputSchema = rawInputSchema
+        ? dereferenceSchema(
+          rawInputSchema as JSONSchema7,
+          schemas.definitions,
+        )
+        : undefined;
+
+      const outputSchemaId = "outputSchema" in func
+        ? func.outputSchema as string
+        : undefined;
+
+      const rawOutputSchema = outputSchemaId
+        ? schemas.definitions[idFromDefinition(outputSchemaId)]
+        : undefined;
+
+      const selfReference = (rawOutputSchema?.anyOf ?? [])[0];
+
+      const outputSchema = selfReference
+        ? dereferenceSchema(
+          selfReference as JSONSchema7,
+          schemas.definitions,
+        )
+        : undefined;
+
+      // Handle tool name slugification and clashes
+      let toolName = (funcDefinition as { name?: string })?.name ??
+        (inputSchema as { name?: string })?.name ?? slugify(resolveType);
+      let idx = 1;
+
+      while (
+        toolNames.has(toolName) && toolNames.get(toolName) !== resolveType
+      ) {
+        toolName = `${toolName}-${idx}`;
+        idx++;
+      }
+      toolNames.set(toolName, resolveType);
+
+      const normalizeSchema = (schema?: JSONSchema7): JSONSchema7 => {
+        return schema && "type" in schema && schema.type === "object"
+          ? schema
+          : {
+            type: "object",
+            additionalProperties: true,
+          };
+      };
+      return {
+        name: toolName,
+        resolveType,
+        description: funcDefinition.description ?? inputSchema?.description ??
+          resolveType,
+        outputSchema: normalizeSchema(outputSchema),
+        inputSchema: normalizeSchema(inputSchema),
+      };
+    },
+  );
+
+  return tools.filter((tool) => tool !== undefined);
+};
 function registerTools<TManifest extends AppManifest>(
   mcp: McpServer,
   deco: Deco<TManifest>,
@@ -61,122 +183,11 @@ function registerTools<TManifest extends AppManifest>(
   // Add map to store slugified names to original names
   const toolNames = new Map<string, string>();
 
-  // Add slugify helper function
-  const slugify = (name: string) => {
-    return name.replace(/[./]/g, "-").replace(/[^a-zA-Z0-9_-]/g, "");
-  };
-
-  const getTools = async () => {
-    const meta = await deco.meta();
-    if (!meta) return [];
-    const schemas = meta.value.schema;
-    if (!schemas) return [];
-
-    const loaders = schemas?.root.loaders ?? { anyOf: [] };
-    const actions = schemas?.root.actions ?? { anyOf: [] };
-    const availableLoaders = "anyOf" in loaders ? loaders.anyOf ?? [] : [];
-    const availableActions = "anyOf" in actions ? actions.anyOf ?? [] : [];
-
-    const tools = [...availableLoaders, ...availableActions].map(
-      (func) => {
-        func = func as RootSchema;
-        if (!func.$ref || func.$ref === RESOLVABLE_DEFINITION) return;
-        const funcDefinition = schemas.definitions[idFromDefinition(func.$ref)];
-        const resolveType =
-          (funcDefinition.properties?.__resolveType as { default: string })
-            .default;
-
-        if (
-          options?.include &&
-          !options.include.includes(
-            resolveType as typeof options.include[number],
-          )
-        ) return;
-
-        if (
-          options?.exclude &&
-          options.exclude.includes(
-            resolveType as typeof options.exclude[number],
-          )
-        ) return;
-
-        const getInputSchemaId = () => {
-          if ("inputSchema" in func) {
-            return func.inputSchema as string;
-          }
-          const props = funcDefinition.allOf ?? [];
-          const propsSchema = props[0];
-          const ref = (propsSchema as JSONSchema7)?.$ref;
-          return ref;
-        };
-
-        const ref = getInputSchemaId();
-        const rawInputSchema = ref
-          ? schemas.definitions[idFromDefinition(ref)]
-          : undefined;
-
-        // Dereference the input schema
-        const inputSchema = rawInputSchema
-          ? dereferenceSchema(
-            rawInputSchema as JSONSchema7,
-            schemas.definitions,
-          )
-          : undefined;
-
-        const outputSchemaId = "outputSchema" in func
-          ? func.outputSchema as string
-          : undefined;
-
-        const rawOutputSchema = outputSchemaId
-          ? schemas.definitions[idFromDefinition(outputSchemaId)]
-          : undefined;
-
-        const selfReference = (rawOutputSchema?.anyOf ?? [])[0];
-
-        const outputSchema = selfReference
-          ? dereferenceSchema(
-            selfReference as JSONSchema7,
-            schemas.definitions,
-          )
-          : undefined;
-
-        // Handle tool name slugification and clashes
-        let toolName = (funcDefinition as { name?: string })?.name ??
-          (inputSchema as { name?: string })?.name ?? slugify(resolveType);
-        let idx = 1;
-
-        while (
-          toolNames.has(toolName) && toolNames.get(toolName) !== resolveType
-        ) {
-          toolName = `${toolName}-${idx}`;
-          idx++;
-        }
-        toolNames.set(toolName, resolveType);
-
-        const normalizeSchema = (schema?: JSONSchema7) => {
-          return schema && "type" in schema && schema.type === "object"
-            ? schema
-            : {
-              type: "object",
-              additionalProperties: true,
-            };
-        };
-        return {
-          name: toolName,
-          resolveType,
-          description: funcDefinition.description ?? inputSchema?.description ??
-            resolveType,
-          outputSchema: normalizeSchema(outputSchema),
-          inputSchema: normalizeSchema(inputSchema),
-        };
-      },
-    );
-
-    return tools.filter((tool) => tool !== undefined);
-  };
-
   mcp.server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return { tools: await getTools() };
+    const meta = await deco.meta().then((v) => v?.value);
+    if (!meta) return { tools: [] };
+    const schemas = meta.schema;
+    return { tools: getTools(toolNames, schemas, options) };
   });
 
   mcp.server.setRequestHandler(CallToolRequestSchema, async (req) => {

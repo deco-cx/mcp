@@ -1,1 +1,1 @@
-export { mcpServer } from "./mcp/server.ts";
+export { getTools, mcpServer, type Tool } from "./mcp/server.ts";
