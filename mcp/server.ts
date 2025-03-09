@@ -111,10 +111,12 @@ function registerTools<TManifest extends AppManifest>(
 
         // Handle tool name slugification and clashes
         let toolName = (funcDefinition as { name?: string })?.name ??
-          slugify(resolveType);
+          (inputSchema as { name?: string })?.name ?? slugify(resolveType);
         let idx = 1;
 
-        while (toolNames.has(toolName)) {
+        while (
+          toolNames.has(toolName) && toolNames.get(toolName) !== resolveType
+        ) {
           toolName = `${toolName}-${idx}`;
           idx++;
         }
