@@ -12,6 +12,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { SSEServerTransport } from "./sse.ts";
 import { dereferenceSchema } from "./utils.ts";
+import { WebSocketServerTransport } from "./websocket.ts";
 
 const idFromDefinition = (definition: string) => {
   const [_, __, id] = definition.split("/");
@@ -157,6 +158,19 @@ export function mcpServer<TManifest extends AppManifest>(
 
   return async (c: Context, next: Next) => {
     const path = new URL(c.req.url).pathname;
+
+    if (
+      path === "/mcp/ws" && c.req.raw.headers.get("upgrade") === "websocket"
+    ) {
+      const { response, socket } = Deno.upgradeWebSocket(c.req.raw);
+
+      const transport = new WebSocketServerTransport();
+
+      transport.acceptWebSocket(socket);
+      mcp.server.connect(transport);
+
+      return response;
+    }
 
     if (path === "/mcp/sse") {
       const transport = new SSEServerTransport(MESSAGES_ENDPOINT);
