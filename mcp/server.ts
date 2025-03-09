@@ -52,6 +52,14 @@ function registerTools<TManifest extends AppManifest>(
   deco: Deco<TManifest>,
   options?: Options<TManifest>,
 ) {
+  // Add map to store slugified names to original names
+  const toolNames = new Map<string, string>();
+
+  // Add slugify helper function
+  const slugify = (name: string) => {
+    return name.replace(/[./]/g, "-").replace(/[^a-zA-Z0-9_-]/g, "");
+  };
+
   const getTools = async () => {
     const meta = await deco.meta();
     if (!meta) return [];
@@ -101,8 +109,19 @@ function registerTools<TManifest extends AppManifest>(
           )
           : undefined;
 
+        // Handle tool name slugification and clashes
+        let toolName = (funcDefinition as { name?: string })?.name ??
+          slugify(resolveType);
+        let idx = 1;
+
+        while (toolNames.has(toolName)) {
+          toolName = `${toolName}-${idx}`;
+          idx++;
+        }
+        toolNames.set(toolName, resolveType);
+
         return {
-          name: resolveType,
+          name: toolName,
           description: funcDefinition.description ?? inputSchema?.description ??
             resolveType,
           inputSchema: inputSchema && "type" in inputSchema &&
@@ -132,8 +151,13 @@ function registerTools<TManifest extends AppManifest>(
           param: () => ({}),
         },
       });
+      // Use the original name from the map when invoking
+      const originalName = toolNames.get(req.params.name);
+      if (!originalName) {
+        throw new Error(`Tool not found: ${req.params.name}`);
+      }
       const result = await deco.invoke(
-        req.params.name as `#${string}`,
+        originalName as `#${string}`,
         // deno-lint-ignore no-explicit-any
         req.params.arguments ?? {} as any,
         undefined,
