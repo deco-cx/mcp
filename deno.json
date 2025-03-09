@@ -1,12 +1,12 @@
 {
   "name": "@deco/mcp",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "exports": "./mod.ts",
   "tasks": {
     "check": "deno fmt && deno lint && deno check mod.ts"
   },
   "imports": {
-    "@deco/deco": "jsr:@deco/deco@1.110.3",
+    "@deco/deco": "jsr:@deco/deco@1.110.4",
     "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@^1.6.1",
     "@hono/hono": "jsr:@hono/hono@^4.5.4",
     "@std/http": "jsr:@std/http@^1.0.13"
