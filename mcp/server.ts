@@ -47,6 +47,12 @@ export interface Options<TManifest extends AppManifest> {
   include?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>;
   exclude?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>;
 }
+
+interface RootSchema extends JSONSchema7 {
+  inputSchema?: string;
+  outputSchema?: string;
+}
+
 function registerTools<TManifest extends AppManifest>(
   mcp: McpServer,
   deco: Deco<TManifest>,
@@ -73,7 +79,7 @@ function registerTools<TManifest extends AppManifest>(
 
     const tools = [...availableLoaders, ...availableActions].map(
       (func) => {
-        func = func as JSONSchema7;
+        func = func as RootSchema;
         if (!func.$ref || func.$ref === RESOLVABLE_DEFINITION) return;
         const funcDefinition = schemas.definitions[idFromDefinition(func.$ref)];
         const resolveType =
@@ -94,9 +100,17 @@ function registerTools<TManifest extends AppManifest>(
           )
         ) return;
 
-        const props = funcDefinition.allOf ?? [];
-        const propsSchema = props[0];
-        const ref = (propsSchema as JSONSchema7)?.$ref;
+        const getInputSchemaId = () => {
+          if ("inputSchema" in func) {
+            return func.inputSchema as string;
+          }
+          const props = funcDefinition.allOf ?? [];
+          const propsSchema = props[0];
+          const ref = (propsSchema as JSONSchema7)?.$ref;
+          return ref;
+        };
+
+        const ref = getInputSchemaId();
         const rawInputSchema = ref
           ? schemas.definitions[idFromDefinition(ref)]
           : undefined;
@@ -105,6 +119,23 @@ function registerTools<TManifest extends AppManifest>(
         const inputSchema = rawInputSchema
           ? dereferenceSchema(
             rawInputSchema as JSONSchema7,
+            schemas.definitions,
+          )
+          : undefined;
+
+        const outputSchemaId = "outputSchema" in func
+          ? func.outputSchema as string
+          : undefined;
+
+        const rawOutputSchema = outputSchemaId
+          ? schemas.definitions[idFromDefinition(outputSchemaId)]
+          : undefined;
+
+        const selfReference = (rawOutputSchema?.anyOf ?? [])[0];
+
+        const outputSchema = selfReference
+          ? dereferenceSchema(
+            selfReference as JSONSchema7,
             schemas.definitions,
           )
           : undefined;
@@ -122,17 +153,21 @@ function registerTools<TManifest extends AppManifest>(
         }
         toolNames.set(toolName, resolveType);
 
-        return {
-          name: toolName,
-          description: funcDefinition.description ?? inputSchema?.description ??
-            resolveType,
-          inputSchema: inputSchema && "type" in inputSchema &&
-              inputSchema.type === "object"
-            ? inputSchema
+        const normalizeSchema = (schema?: JSONSchema7) => {
+          return schema && "type" in schema && schema.type === "object"
+            ? schema
             : {
               type: "object",
-              properties: {},
-            },
+              additionalProperties: true,
+            };
+        };
+        return {
+          name: toolName,
+          resolveType,
+          description: funcDefinition.description ?? inputSchema?.description ??
+            resolveType,
+          outputSchema: normalizeSchema(outputSchema),
+          inputSchema: normalizeSchema(inputSchema),
         };
       },
     );

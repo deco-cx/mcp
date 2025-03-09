@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 import type { JSONSchema7 } from "@deco/deco";
 
 export function dereferenceSchema(
@@ -27,7 +28,7 @@ export function dereferenceSchema(
 
   // Handle allOf
   if (result.allOf) {
-    result.allOf = result.allOf.map((subSchema) =>
+    result.allOf = result.allOf.map((subSchema: any) =>
       dereferenceSchema(
         subSchema as JSONSchema7,
         definitions,
@@ -38,7 +39,7 @@ export function dereferenceSchema(
 
   // Handle anyOf
   if (result.anyOf) {
-    result.anyOf = result.anyOf.map((subSchema) =>
+    result.anyOf = result.anyOf.map((subSchema: any) =>
       dereferenceSchema(
         subSchema as JSONSchema7,
         definitions,
@@ -49,7 +50,7 @@ export function dereferenceSchema(
 
   // Handle oneOf
   if (result.oneOf) {
-    result.oneOf = result.oneOf.map((subSchema) =>
+    result.oneOf = result.oneOf.map((subSchema: any) =>
       dereferenceSchema(
         subSchema as JSONSchema7,
         definitions,
