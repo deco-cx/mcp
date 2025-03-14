@@ -8,6 +8,16 @@ export function dereferenceSchema(
 ): JSONSchema7 | undefined {
   if (!schema) return undefined;
 
+  // Handle array types by converting to anyOf
+  if (schema.type && Array.isArray(schema.type)) {
+    const result: JSONSchema7 = {
+      ...schema,
+      anyOf: schema.type.map((t: any) => ({ type: t })),
+    };
+    delete result.type;
+    return result;
+  }
+
   // Handle direct $ref
   if ("$ref" in schema && typeof schema.$ref === "string") {
     const refId = idFromDefinition(schema.$ref);
