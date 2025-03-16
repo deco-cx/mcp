@@ -1,72 +1,49 @@
-# MCP Server
+# Deco MCP SDK
 
-A simple tool that transforms any [Deco](https://deco.cx) site into an MCP
-server.
+This repository contains two main components that power Deco's AI capabilities:
 
-## Installation
+## 🤖 [Agents](./agents)
 
-```bash
-deno add @deco/mcp
-```
+The Enterprise AI Agent Platform - A sophisticated Multi-AI Agent system that
+leverages Cloudflare's infrastructure to provide:
 
-## Usage
+- Multiple AI model support (Anthropic, OpenAI, Google, Mistral, etc.)
+- Advanced memory system with vector storage
+- Enterprise-grade security
+- Multi-channel integration
+- Extensible tool system
 
-Here's how to set up an MCP server with your Deco site:
+[Learn more about Agents →](./agents)
 
-1. If you're using `https://github.com/deco-sites/mcp` as template
+## 🔧 [MCP Server](./mcp)
 
-```typescript
-import { Deco } from "@deco/deco";
-import { Hono } from "@hono/hono";
-import manifest, { Manifest } from "./manifest.gen.ts";
-import { mcpServer } from "@deco/mcp";
+A powerful tool that transforms any [Deco](https://deco.cx) site into an MCP
+server, enabling:
 
-const app = new Hono();
-const deco = await Deco.init<Manifest>({ manifest });
-const envPort = Deno.env.get("PORT");
+- Dynamic server connection management
+- Configurable tool filtering
+- Integration with Deco sites
+- Support for both Fresh and standalone implementations
 
-// Add MCP server middleware
-app.use("/*", mcpServer(deco));
-// optionally you can select tools
-// app.use("/*", mcpServer<Manifest>(deco, { include: ["site/loaders/helloWorld.ts"] })); // only hello world will be available
+[Learn more about MCP Server →](./mcp)
 
-// Handle all routes with Deco
-app.all("/*", async (c) => c.res = await deco.fetch(c.req.raw));
+## Getting Started
 
-// Start the server
-Deno.serve({
-  handler: app.fetch,
-  port: envPort ? +envPort : 8000,
-});
-```
+Each component has its own specific setup and requirements. Please refer to
+their respective documentation:
 
-2. If you're a fresh-based site // in your fresh.config.ts
+- [Agents Documentation](./agents/README.md)
+- [MCP Server Documentation](./mcp/README.md)
 
-```typescript
-import { defineConfig } from "$fresh/server.ts";
-import { plugins } from "deco/plugins/deco.ts";
-import manifest from "./manifest.gen.ts";
-import { mcpServer } from "@deco/mcp";
+## License
 
-export default defineConfig({
-  plugins: plugins({
-    manifest,
-    htmx: true,
-    useServer: (deco, hono) => {
-      hono.use("/*", mcpServer(deco as any)); // some type errors may occur
-    },
-  }),
-});
-```
+This project is licensed under the MIT License - see the LICENSE file for
+details.
 
-## Configuration
+## Support
 
-Add the MCP server as a SSE endpoint using the production domain:
-https://sites-mcp.decocdn.com/mcp/sse
+For questions and support:
 
-<img width="1718" alt="image" src="https://github.com/user-attachments/assets/8a94dd3b-be41-48b5-98db-22ddae16391f" />
-
-## Requirements
-
-- Deno runtime
-- A Deco site with a valid manifest
+- Visit our [documentation](https://deco.cx/docs)
+- Join our [Discord community](https://deco.cx/discord)
+- File an issue in this repository

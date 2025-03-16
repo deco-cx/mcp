@@ -1,14 +1,31 @@
 {
-  "name": "@deco/mcp",
-  "version": "0.1.12",
-  "exports": "./mod.ts",
+  "compilerOptions": {
+    "strict": true,
+    "useUnknownInCatchVariables": true,
+    "noImplicitOverride": true
+  },
   "tasks": {
-    "check": "deno fmt && deno lint && deno check mod.ts"
+    "check": "deno fmt && deno lint && deno check **/mod.ts",
+    "test": "deno test --allow-all"
   },
   "imports": {
+    "@ai-sdk/anthropic": "npm:@ai-sdk/anthropic@^1.1.17",
+    "@ai-sdk/google": "npm:@ai-sdk/google@^1.1.25",
+    "@ai-sdk/openai": "npm:@ai-sdk/openai@^1.2.5",
+    "@deco/actors": "jsr:@deco/actors@^0.31.1",
     "@deco/deco": "jsr:@deco/deco@1.110.4",
-    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@^1.6.1",
+    "@mastra/core": "npm:@mastra/core@^0.6.0",
+    "@mastra/mcp": "npm:@mastra/mcp@^0.3.1",
+    "@mastra/memory": "npm:@mastra/memory@^0.2.1",
+    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@^1.7.0",
     "@hono/hono": "jsr:@hono/hono@^4.5.4",
-    "@std/http": "jsr:@std/http@^1.0.13"
-  }
+    "@std/http": "jsr:@std/http@^1.0.13",
+    "ai": "npm:ai@^4.1.61",
+    "zod": "npm:zod@^3.24.2",
+    "zod-to-json-schema": "npm:zod-to-json-schema@^3.24.4"
+  },
+  "workspace": [
+    "./mcp",
+    "./agents"
+  ]
 }
