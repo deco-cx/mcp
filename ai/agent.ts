@@ -50,8 +50,7 @@ export interface Env {
 }
 
 export interface DecoAgentMetadata {
-  userEmail?: string;
-  threadId?: string;
+  principal?: string;
 }
 
 const DEFAULT_MODEL = `anthropic:claude-3-7-sonnet-20250219`;
@@ -75,8 +74,7 @@ export class DecoAgent implements AIAgent {
   enrichMetadata(m: DecoAgentMetadata, req: Request): DecoAgentMetadata {
     return {
       ...m,
-      userEmail: req.headers.get("X-User-Email") ?? undefined,
-      threadId: req.headers.get("X-Thread-Id") ?? undefined,
+      principal: req.headers.get("x-principal-id") ?? crypto.randomUUID(),
     };
   }
 
@@ -172,7 +170,7 @@ export class DecoAgent implements AIAgent {
       memory: this.memory,
       name: "Anonymous",
       instructions:
-        "You should help users to configure yourself. Users should give you their name, instructions, and optionally a model (leave it default if the user don't mention it, don't force they to set it). This is your only task for now. Tell the user that you are ready to configure yourself when you have all the information.",
+        "You should help users to configure yourself. Users should give you your name, instructions, and optionally a model (leave it default if the user don't mention it, don't force they to set it). This is your only task for now. Tell the user that you are ready to configure yourself when you have all the information.",
       model: this.createLLM({ model: DEFAULT_MODEL, apiKey: this.env?.ANTHROPIC_API_KEY }),
       tools: this.innateTools,
     });
@@ -218,10 +216,11 @@ export class DecoAgent implements AIAgent {
   }
 
   private get channel(): { threadId: string; resourceId: string } {
-    const threadId = this.metadata?.threadId ?? crypto.randomUUID();
+    const resource = this.metadata?.principal ?? crypto.randomUUID();
+    const threadId = `${this.state.id}-${resource}`; // private thread with the given resource
     return {
       threadId,
-      resourceId: this.metadata?.userEmail ?? threadId,
+      resourceId: resource,
     };
   }
 

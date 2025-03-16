@@ -93,7 +93,7 @@ Agents support multiple communication modes:
 1. Install the package:
 
 ```bash
-npm install @deco/agents
+npm install @deco/ai
 ```
 
 2. Configure your environment variables:
@@ -107,7 +107,7 @@ AI_PROVIDER_API_KEYS=your_api_keys
 3. Initialize an agent:
 
 ```typescript
-import { AIAgent } from "@deco/agents";
+import { AIAgent } from "@deco/ai";
 
 const agent = new AIAgent({
   name: "MyAgent",
@@ -117,4 +117,4 @@ const agent = new AIAgent({
 ```
 
 For more detailed documentation and examples, please refer to our
-[documentation](https://deco.cx/docs/agents).
+[documentation](https://deco.cx/docs/ai).

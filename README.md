@@ -2,7 +2,7 @@
 
 This repository contains two main components that power Deco's AI capabilities:
 
-## 🤖 [Agents](./agents)
+## 🤖 [Agents](./ai)
 
 The Enterprise AI Agent Platform - A sophisticated Multi-AI Agent system that
 leverages Cloudflare's infrastructure to provide:
@@ -13,7 +13,7 @@ leverages Cloudflare's infrastructure to provide:
 - Multi-channel integration
 - Extensible tool system
 
-[Learn more about Agents →](./agents)
+[Learn more about Agents →](./ai)
 
 ## 🔧 [MCP Server](./mcp)
 
@@ -32,7 +32,7 @@ server, enabling:
 Each component has its own specific setup and requirements. Please refer to
 their respective documentation:
 
-- [Agents Documentation](./agents/README.md)
+- [Agents Documentation](./ai/README.md)
 - [MCP Server Documentation](./mcp/README.md)
 
 ## License
