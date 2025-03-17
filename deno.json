@@ -12,6 +12,7 @@
     "@ai-sdk/anthropic": "npm:@ai-sdk/anthropic@^1.1.17",
     "@ai-sdk/google": "npm:@ai-sdk/google@^1.1.25",
     "@ai-sdk/openai": "npm:@ai-sdk/openai@^1.2.5",
+    "@ai-sdk/provider": "npm:@ai-sdk/provider@^1.0.11",
     "@deco/actors": "jsr:@deco/actors@^0.31.1",
     "@deco/deco": "jsr:@deco/deco@1.110.4",
     "@mastra/core": "npm:@mastra/core@^0.6.0",

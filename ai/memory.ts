@@ -1,4 +1,8 @@
-import type { MessageType, StorageThreadType } from "@mastra/core/memory";
+import type {
+  MastraMemory,
+  MessageType,
+  StorageThreadType,
+} from "@mastra/core/memory";
 import {
   type EvalRow,
   MastraStorage,
@@ -7,6 +11,11 @@ import {
   type TABLE_NAMES,
 } from "@mastra/core/storage";
 import * as path from "node:path";
+import type { Env } from "./agent.ts";
+import { Memory } from "@mastra/memory";
+import { LibSQLVector } from "@mastra/core/vector/libsql";
+import * as fs from "node:fs/promises";
+import process from "node:process";
 
 export interface FSConfig {
   basePath: string;
@@ -315,3 +324,16 @@ export class FSStore extends MastraStorage {
     // No cleanup needed for filesystem
   }
 }
+
+export const createMemory = (env: Env): MastraMemory => {
+  return new Memory({
+    storage: new FSStore({
+      basePath: `${process.cwd()}/.storage`,
+      fs,
+    }),
+    vector: new LibSQLVector({
+      connectionUrl: env?.LIBSQL_URL,
+      authToken: env?.LIBSQL_AUTH_TOKEN,
+    }),
+  }) as unknown as MastraMemory;
+};

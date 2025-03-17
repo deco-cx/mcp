@@ -7,7 +7,7 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { WebSocketClientTransport } from "@modelcontextprotocol/sdk/client/websocket.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import type { MCPServer } from "./tools/innate.ts";
+import type { MCPServer } from "./tools.ts";
 const _mcpServerTools = async (
   mcpServer: MCPServer,
 ): Promise<Record<string, ToolAction<any, any, any>>> => {

@@ -1,11 +1,9 @@
 // deno-lint-ignore-file no-explicit-any
-import type { ToolAction } from "@mastra/core";
-import { Agent, type ToolsetsInput } from "@mastra/core/agent";
-import { LibSQLVector } from "@mastra/core/vector/libsql";
-
 import type { ActorState } from "@deco/actors";
 import { Actor } from "@deco/actors";
-import { Memory } from "@mastra/memory";
+import type { MastraMemory, ToolAction } from "@mastra/core";
+import { Agent } from "@mastra/core";
+import type { ToolsetsInput } from "@mastra/core/agent";
 import type {
   CoreMessage,
   GenerateTextResult,
@@ -13,33 +11,23 @@ import type {
   StreamTextResult,
   TextStreamPart,
 } from "ai";
-import { zodToJsonSchema } from "zod-to-json-schema";
-import type {
-  AIAgent,
-  Tool,
-} from "./types.ts";
-import { FSStore } from "./memory/fs.ts";
-import type {
-  Configuration,
-  MCPServer,
-  TextModel,
-} from "./tools/innate.ts";
-import { createInnateTools } from "./tools/innate.ts";
-
-import * as fs from "node:fs/promises";
 import process from "node:process";
-import { createLLM } from "./models/providers.ts";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import { createMemory } from "./memory.ts";
+import { createLLM } from "./models.ts";
+import type { Configuration, MCPServer, TextModel } from "./tools.ts";
+import { createInnateTools } from "./tools.ts";
+import type { AIAgent, Tool } from "./types.ts";
 import { mcpServerTools } from "./utils.ts";
 
 const DEFAULT_ACCOUNT_ID = "c95fc4cec7fc52453228d9db170c372c";
 const DEFAULT_GATEWAY_ID = "deco-ai";
 const Keys = {
-
-  NAME_KEY: "name",
-  INSTRUCTIONS_KEY: "instructions",
-  MODEL_KEY: "model",
-  API_KEY_KEY: "apiKey",
-}
+  NAME: "name",
+  INSTRUCTIONS: "instructions",
+  MODEL: "model",
+  API_KEY: "apiKey",
+};
 
 export interface Env {
   ANTHROPIC_API_KEY: string;
@@ -63,9 +51,11 @@ export class DecoAgent implements AIAgent {
   private toolSet: ToolsetsInput = {};
   private innateTools: ReturnType<typeof createInnateTools>;
   public metadata?: DecoAgentMetadata;
+  private memory: MastraMemory;
 
   constructor(public readonly state: ActorState, private env: any) {
     this.env = { ...process.env, ...this.env };
+    this.memory = createMemory(this.env);
     this.innateTools = createInnateTools(this);
     this.state.blockConcurrencyWhile(async () => {
       await this.init();
@@ -79,31 +69,34 @@ export class DecoAgent implements AIAgent {
   }
 
   async setModel(model: TextModel) {
-    await this.state.storage.put(Keys.MODEL_KEY, model);
+    await this.state.storage.put(Keys.MODEL, model);
     this._model = model;
   }
 
   async getModel(): Promise<TextModel> {
-    return this._model ??= await this.state.storage.get<TextModel>(Keys.MODEL_KEY) ??
-      DEFAULT_MODEL;
+    return this._model ??=
+      await this.state.storage.get<TextModel>(Keys.MODEL) ??
+        DEFAULT_MODEL;
   }
 
   private async getKey(): Promise<string> {
-    return this._apiKey ??= await this.state.storage.get<TextModel>(Keys.API_KEY_KEY);
+    return this._apiKey ??= await this.state.storage.get<TextModel>(
+      Keys.API_KEY,
+    );
   }
 
   async configure(config: Configuration): Promise<void> {
     await Promise.all([
-      this.state.storage.put(Keys.NAME_KEY, config.name),
-      this.state.storage.put(Keys.INSTRUCTIONS_KEY, config.instructions),
-      this.state.storage.put(Keys.MODEL_KEY, config.model),
+      this.state.storage.put(Keys.NAME, config.name),
+      this.state.storage.put(Keys.INSTRUCTIONS, config.instructions),
+      this.state.storage.put(Keys.MODEL, config.model),
     ]);
     await this.init();
   }
 
   public async updateTools(): Promise<void> {
-    const mcpServers: MCPServer[] =
-      await this.innateTools.listConnectedMCPServers.execute!({ context: {} });
+    const mcpServers: MCPServer[] = await this.innateTools
+      .listConnectedMCPServers.execute!({ context: {} });
     const newToolSet: Record<
       string,
       Record<string, ToolAction<any, any, any>>
@@ -120,8 +113,10 @@ export class DecoAgent implements AIAgent {
 
   private async init() {
     await this.updateTools();
-    const name = await this.state.storage.get<string>(Keys.NAME_KEY);
-    const instructions = await this.state.storage.get<string>(Keys.INSTRUCTIONS_KEY);
+    const name = await this.state.storage.get<string>(Keys.NAME);
+    const instructions = await this.state.storage.get<string>(
+      Keys.INSTRUCTIONS,
+    );
     if (!name || !instructions) {
       return;
     }
@@ -135,25 +130,18 @@ export class DecoAgent implements AIAgent {
         if they want to connect to their googledrive you should search for any MCPServer that meets their needs using: ${this.innateTools.listKnownMCPServers.id}
         if you want to take action based on already installed mcp servers you can use ${this.innateTools.listConnectedMCPServers.id}, you use use the same returned payload to create the MCP server using ${this.innateTools.connectToMCPServer.id}, ${this.innateTools.disconnectFromMCPServer.id}.
         You must tell users what you can do based on the tools available, whenever you think you cannot fulfill the user request, tell them that you cannot do that and try to find a MCPServer that can help them using the ${this.innateTools.listKnownMCPServers.id} tool.`,
-      model: this.createLLM(apiKey ? { model, apiKey } : { model: model ?? DEFAULT_MODEL, apiKey: this.env?.ANTHROPIC_API_KEY }),
+      model: this.createLLM(
+        apiKey ? { model, apiKey } : {
+          model: model ?? DEFAULT_MODEL,
+          apiKey: this.env?.ANTHROPIC_API_KEY,
+        },
+      ),
     });
   }
 
-  private _memory?: Memory;
-  private get memory(): Memory {
-    return this._memory ??= new Memory({
-      storage: new FSStore({
-        basePath: `${Deno.cwd()}/.storage`,
-        fs,
-      }),
-      vector: new LibSQLVector({
-        connectionUrl: this.env?.LIBSQL_URL,
-        authToken: this.env?.LIBSQL_AUTH_TOKEN,
-      }),
-    });
-  }
-
-  private createLLM({ model, apiKey }: { model: string, apiKey: string }): LanguageModelV1 {
+  private createLLM(
+    { model, apiKey }: { model: string; apiKey: string },
+  ): LanguageModelV1 {
     const [provider, providerModel] = model.split(":");
     const accountId = this.env?.ACCOUNT_ID ?? DEFAULT_ACCOUNT_ID;
     const gatewayId = this.env?.GATEWAY_ID ?? DEFAULT_GATEWAY_ID;
@@ -161,7 +149,7 @@ export class DecoAgent implements AIAgent {
       apiKey,
       accountId,
       gatewayId,
-      provider
+      provider,
     })(providerModel);
   }
 
@@ -171,7 +159,10 @@ export class DecoAgent implements AIAgent {
       name: "Anonymous",
       instructions:
         "You should help users to configure yourself. Users should give you your name, instructions, and optionally a model (leave it default if the user don't mention it, don't force they to set it). This is your only task for now. Tell the user that you are ready to configure yourself when you have all the information.",
-      model: this.createLLM({ model: DEFAULT_MODEL, apiKey: this.env?.ANTHROPIC_API_KEY }),
+      model: this.createLLM({
+        model: DEFAULT_MODEL,
+        apiKey: this.env?.ANTHROPIC_API_KEY,
+      }),
       tools: this.innateTools,
     });
   }
@@ -186,11 +177,13 @@ export class DecoAgent implements AIAgent {
         mtoolset[setName] = mtoolset[setName] ?? {};
         mtoolset[setName][toolName] = {
           name: toolName,
-          description: tool.description,
-          inputSchema: tool.inputSchema ? zodToJsonSchema(tool.inputSchema) : {
-            type: "object",
-            properties: {},
-          },
+          description: tool.description ?? "",
+          inputSchema: "inputSchema" in tool && tool.inputSchema
+            ? zodToJsonSchema(tool.inputSchema)
+            : {
+              type: "object",
+              properties: {},
+            },
         };
       }
     }

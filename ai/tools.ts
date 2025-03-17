@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createTool } from "@mastra/core";
-import type { DecoAgent } from "../agent.ts";
+import type { DecoAgent } from "./agent.ts";
 
 const TextModelSchema = z.enum([
   "openai:gpt-4-turbo",
@@ -35,8 +35,7 @@ const TextModelSchema = z.enum([
   "perplexity:llama-3.1-sonar-huge-128k-online",
   "pinecone:*",
   "test:test-model",
-])
-
+]);
 
 const SSEConnectionSchema = z.object({
   type: z.literal("SSE"),
@@ -114,13 +113,14 @@ type ToolFactory = (agent: DecoAgent) => ReturnType<typeof createTool>;
 
 const Keys = {
   MCP_SERVERS_KEY: "mcpServers",
-}
+};
 function listConnectedMCPServers(agent: DecoAgent) {
   return createTool({
     id: listConnectedMCPServers.name,
     description: "List all connected MCPServers",
     execute: async () => {
-      return await agent.state.storage.get<MCPServer[]>(Keys.MCP_SERVERS_KEY) ?? [];
+      return await agent.state.storage.get<MCPServer[]>(Keys.MCP_SERVERS_KEY) ??
+        [];
     },
   });
 }
@@ -199,7 +199,9 @@ function disconnectFromMCPServer(agent: DecoAgent) {
       if (!mcpServers) {
         return;
       }
-      const index = mcpServers.findIndex((mcpServer) => context.name === mcpServer.name);
+      const index = mcpServers.findIndex((mcpServer) =>
+        context.name === mcpServer.name
+      );
       if (index !== -1) {
         mcpServers.splice(index, 1);
         await agent.state.storage.put(Keys.MCP_SERVERS_KEY, mcpServers);
@@ -231,7 +233,12 @@ function configuration(agent: DecoAgent) {
   });
 }
 const toolsFactory = {
-  configuration, configure, listConnectedMCPServers, listKnownMCPServers, connectToMCPServer, disconnectFromMCPServer
+  configuration,
+  configure,
+  listConnectedMCPServers,
+  listKnownMCPServers,
+  connectToMCPServer,
+  disconnectFromMCPServer,
 } as const;
 
 /**
@@ -240,12 +247,17 @@ const toolsFactory = {
  * @returns A record of tools
  */
 export function createInnateTools(agent: DecoAgent) {
-  const tools: Record<keyof typeof toolsFactory, ReturnType<typeof createTool>> = {} as Record<keyof typeof toolsFactory, ReturnType<typeof createTool>>;
+  const tools: Record<
+    keyof typeof toolsFactory,
+    ReturnType<typeof createTool>
+  > = {} as Record<keyof typeof toolsFactory, ReturnType<typeof createTool>>;
 
   for (const create of Object.values(toolsFactory)) {
     const tool = create(agent);
     tools[tool.id as keyof typeof tools] = tool;
   }
   return tools;
-};
-createInnateTools satisfies (agent: DecoAgent) => Record<string, ReturnType<typeof createTool>>;
+}
+createInnateTools satisfies (
+  agent: DecoAgent,
+) => Record<string, ReturnType<typeof createTool>>;

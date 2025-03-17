@@ -23,7 +23,7 @@ import { mcpServer } from "@deco/mcp";
 
 const app = new Hono();
 const deco = await Deco.init<Manifest>({ manifest });
-const envPort = Deno.env.get("PORT");
+const envPort = process.env.PORT;
 
 // Add MCP server middleware
 app.use("/*", mcpServer(deco));

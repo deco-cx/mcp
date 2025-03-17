@@ -14,13 +14,14 @@ import {
 import { SSEServerTransport } from "./sse.ts";
 import { dereferenceSchema } from "./utils.ts";
 import { WebSocketServerTransport } from "./websocket.ts";
+import process from "node:process";
 
 const idFromDefinition = (definition: string) => {
   const [_, __, id] = definition.split("/");
   return id;
 };
 
-const IS_DEBUG = Deno.env.get("DEBUG") === "1";
+const IS_DEBUG = process.env.DEBUG === "1";
 const RESOLVABLE_DEFINITION = "#/definitions/Resolvable";
 
 function setupMcpServer<TManifest extends AppManifest>(
@@ -28,7 +29,7 @@ function setupMcpServer<TManifest extends AppManifest>(
   options?: Options<TManifest>,
 ) {
   const mcp = new McpServer({
-    name: `deco-site-${context.site ?? Deno.env.get("DECO_SITE_NAME")}`,
+    name: `deco-site-${context.site ?? process.env.DECO_SITE_NAME}`,
     version: context.deploymentId ?? "unknown",
   }, {
     capabilities: {
