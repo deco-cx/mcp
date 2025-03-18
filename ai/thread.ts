@@ -31,7 +31,7 @@ export class ThreadActor implements Thread {
     this.state.blockConcurrencyWhile(async () => {
       const participants = await this.getParticipants();
       this.participants = participants.map((id) =>
-        this.state.stub(DecoAgent).id(id)
+        this.state.stub(DecoAgent).new(id)
       );
     });
   }
@@ -40,7 +40,7 @@ export class ThreadActor implements Thread {
     return await this.state.storage.get<string[]>(Keys.PARTICIPANTS) ?? [];
   }
 
-  private async addParticipant(agentId: string): Promise<void> {
+  public async invite(agentId: string): Promise<void> {
     const participants = await this.getParticipants();
     if (!participants.includes(agentId)) {
       participants.push(agentId);

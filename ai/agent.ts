@@ -76,7 +76,7 @@ export class DecoAgent implements AIAgent {
   async getModel(): Promise<TextModel> {
     return this._model ??=
       await this.state.storage.get<TextModel>(Keys.MODEL) ??
-        DEFAULT_MODEL;
+      DEFAULT_MODEL;
   }
 
   private async getKey(): Promise<string> {
@@ -235,6 +235,7 @@ export class DecoAgent implements AIAgent {
     });
     // check this
     yield* response.fullStream;
+    // @ts-ignore: this is a bug in the types
     return response;
   }
 }

@@ -39,7 +39,7 @@ export interface ThreadQueryOptions {
  * Interface for managing a message thread
  * Note: Any sender of a message is automatically added as a thread participant
  */
-export interface Thread {
+export interface Thread extends Actor {
   /**
    * Sends a message to the thread
    * @param message - The message content to send
@@ -60,6 +60,43 @@ export interface Thread {
    * @returns AsyncIterator that yields new messages as they arrive
    */
   watch(opts?: ThreadWatchOptions): AsyncIterableIterator<ThreadMessage>;
+
+  /**
+   * Invites an agent to the thread
+   * @param agentId - The ID of the agent to invite
+   * @returns Promise that resolves when the agent is invited
+   */
+  invite(agentId: string): Promise<void>;
+}
+
+/**
+ * Represents a paginated list of items
+ */
+export interface Pagination<T> {
+  items: T[];
+  nextCursor: string;
+}
+
+/**
+ * Represents a thread
+ */
+export interface ThreadContent {
+  id: string;
+}
+
+/**
+ * Options for listing threads
+ */
+export interface ThreadListOptions {
+  cursor?: string;
+  limit?: number;
+}
+
+/**
+ * Represents a list of threads
+ */
+export interface Threads {
+  list(opts?: ThreadListOptions): Promise<Pagination<ThreadContent>>;
 }
 
 /**

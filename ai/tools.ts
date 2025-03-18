@@ -109,11 +109,10 @@ export const ConfigureOutputSchema = z.void();
 
 export type Configuration = z.infer<typeof ConfigurationSchema>;
 
-type ToolFactory = (agent: DecoAgent) => ReturnType<typeof createTool>;
-
 const Keys = {
   MCP_SERVERS_KEY: "mcpServers",
 };
+
 function listConnectedMCPServers(agent: DecoAgent) {
   return createTool({
     id: listConnectedMCPServers.name,

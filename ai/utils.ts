@@ -8,6 +8,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { WebSocketClientTransport } from "@modelcontextprotocol/sdk/client/websocket.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import type { MCPServer } from "./tools.ts";
+
 const _mcpServerTools = async (
   mcpServer: MCPServer,
 ): Promise<Record<string, ToolAction<any, any, any>>> => {
@@ -44,11 +45,11 @@ const _mcpServerTools = async (
     const { tools: _mtools } = await client.listTools();
     const mtools: Record<string, ToolAction<any, any, any>> = Object
       .fromEntries(
-        _mtools.map((tool) => [
+        _mtools.map((tool: typeof _mtools[number]) => [
           tool.name,
           createTool({
             id: tool.name,
-            description: tool.description ?? "",
+            description: tool.description! ?? "",
             inputSchema: jsonSchemaToModel(tool.inputSchema),
             execute: async ({ context }) => {
               return await client.callTool({

@@ -2,7 +2,6 @@ import { createAnthropic as anthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI as google } from "@ai-sdk/google";
 import { createOpenAI as openai } from "@ai-sdk/openai";
 import type { LanguageModelV1 } from "ai";
-import type { ProviderV1 } from "@ai-sdk/provider";
 
 interface AIGatewayOptions {
   accountId: string;
@@ -16,11 +15,11 @@ const aiGatewayForProvider = (
 ) =>
   `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/${provider}`;
 
-export type ProviderFactory = (opts: AIGatewayOptions) => LanguageModelV1;
+type ProviderFactory = (opts: AIGatewayOptions) => (model: string) => LanguageModelV1;
 
 type NativeLLMCreator = <TOpts extends { baseURL: string; apiKey: string }>(
   opts: TOpts,
-) => ProviderV1;
+) => (model: string) => LanguageModelV1;
 
 /**
  * Supported providers for the AI Gateway
