@@ -47,6 +47,7 @@ function setupMcpServer<TManifest extends AppManifest>(
 export interface Options<TManifest extends AppManifest> {
   include?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>;
   exclude?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>;
+  blocks?: Array<keyof TManifest>;
 }
 
 interface RootSchema extends JSONSchema7 {
@@ -73,12 +74,16 @@ export const getTools = <TManifest extends AppManifest>(
 ): Tool[] => {
   if (!schemas) return [];
 
-  const loaders = schemas?.root.loaders ?? { anyOf: [] };
-  const actions = schemas?.root.actions ?? { anyOf: [] };
-  const availableLoaders = "anyOf" in loaders ? loaders.anyOf ?? [] : [];
-  const availableActions = "anyOf" in actions ? actions.anyOf ?? [] : [];
+  const blocks = options?.blocks ?? ["loaders", "actions"];
 
-  const tools = [...availableLoaders, ...availableActions].map(
+  // Get available functions from all specified blocks
+  const availableFunctions = blocks.flatMap((block) => {
+    const blockSchema = schemas?.root[block as keyof typeof schemas["root"]] ??
+      { anyOf: [] };
+    return "anyOf" in blockSchema ? blockSchema.anyOf ?? [] : [];
+  });
+
+  const tools = availableFunctions.map(
     (func) => {
       func = func as RootSchema;
       if (!func.$ref || func.$ref === RESOLVABLE_DEFINITION) return;
@@ -175,6 +180,7 @@ export const getTools = <TManifest extends AppManifest>(
 
   return tools.filter((tool) => tool !== undefined);
 };
+
 function registerTools<TManifest extends AppManifest>(
   mcp: McpServer,
   deco: Deco<TManifest>,
