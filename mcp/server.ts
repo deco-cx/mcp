@@ -48,6 +48,7 @@ export interface Options<TManifest extends AppManifest> {
   include?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>;
   exclude?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>;
   blocks?: Array<keyof TManifest>;
+  basePath?: string;
 }
 
 interface RootSchema extends JSONSchema7 {
@@ -238,7 +239,7 @@ export function mcpServer<TManifest extends AppManifest>(
     const path = new URL(c.req.url).pathname;
 
     if (
-      path === "/mcp/ws" && c.req.raw.headers.get("upgrade") === "websocket"
+      path === `${options?.basePath ?? ""}/mcp/ws` && c.req.raw.headers.get("upgrade") === "websocket"
     ) {
       const { response, socket } = Deno.upgradeWebSocket(c.req.raw);
 
@@ -250,7 +251,7 @@ export function mcpServer<TManifest extends AppManifest>(
       return response;
     }
 
-    if (path === "/mcp/sse") {
+    if (path === `${options?.basePath ?? ""}/mcp/sse`) {
       const transport = new SSEServerTransport(MESSAGES_ENDPOINT);
       transports.set(transport.sessionId, transport);
 
@@ -264,7 +265,7 @@ export function mcpServer<TManifest extends AppManifest>(
       return response;
     }
 
-    if (path === MESSAGES_ENDPOINT) {
+    if (path === `${options?.basePath ?? ""}${MESSAGES_ENDPOINT}`) {
       const sessionId = c.req.query("sessionId");
       if (!sessionId) {
         return c.json({ error: "Missing sessionId" }, 400);
