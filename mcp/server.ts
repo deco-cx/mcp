@@ -28,7 +28,7 @@ function setupMcpServer<TManifest extends AppManifest>(
   options?: Options<TManifest>,
 ) {
   const mcp = new McpServer({
-    name: `deco-site-${context.site ?? Deno.env.get("DECO_SITE_NAME")}`,
+    name: `deco-site-${crypto.randomUUID()}`,
     version: context.deploymentId ?? "unknown",
   }, {
     capabilities: {
@@ -188,13 +188,17 @@ function registerTools<TManifest extends AppManifest>(
   options?: Options<TManifest>,
 ) {
   // Add map to store slugified names to original names
-  const toolNames = new Map<string, string>();
-
-  mcp.server.setRequestHandler(ListToolsRequestSchema, async () => {
+  let toolNames: null | Map<string, string> = null;
+  const loadTools = async () => {
+    toolNames ??= new Map<string, string>();
     const meta = await deco.meta().then((v) => v?.value);
     if (!meta) return { tools: [] };
     const schemas = meta.schema;
     return { tools: getTools(toolNames, schemas, options) };
+  };
+
+  mcp.server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return await loadTools();
   });
 
   mcp.server.setRequestHandler(CallToolRequestSchema, async (req) => {
@@ -207,7 +211,10 @@ function registerTools<TManifest extends AppManifest>(
         },
       });
       // Use the original name from the map when invoking
-      const originalName = toolNames.get(req.params.name);
+      if (!toolNames) {
+        await loadTools();
+      }
+      const originalName = toolNames!.get(req.params.name);
       if (!originalName) {
         throw new Error(`Tool not found: ${req.params.name}`);
       }
