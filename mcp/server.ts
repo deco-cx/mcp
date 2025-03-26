@@ -239,7 +239,8 @@ export function mcpServer<TManifest extends AppManifest>(
     const path = new URL(c.req.url).pathname;
 
     if (
-      path === `${options?.basePath ?? ""}/mcp/ws` && c.req.raw.headers.get("upgrade") === "websocket"
+      path === `${options?.basePath ?? ""}/mcp/ws` &&
+      c.req.raw.headers.get("upgrade") === "websocket"
     ) {
       const { response, socket } = Deno.upgradeWebSocket(c.req.raw);
 
@@ -252,7 +253,9 @@ export function mcpServer<TManifest extends AppManifest>(
     }
 
     if (path === `${options?.basePath ?? ""}/mcp/sse`) {
-      const transport = new SSEServerTransport(MESSAGES_ENDPOINT);
+      const transport = new SSEServerTransport(
+        `${options?.basePath ?? ""}${MESSAGES_ENDPOINT}`,
+      );
       transports.set(transport.sessionId, transport);
 
       transport.onclose = () => {
