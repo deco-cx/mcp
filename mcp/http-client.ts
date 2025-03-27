@@ -184,6 +184,7 @@ export class HttpClientTransport implements Transport {
   async send(message: JSONRPCMessage): Promise<void> {
     // Create a new abort controller for this request
     this._abortController = new AbortController();
+    let response: Response | undefined;
 
     try {
       const commonHeaders = await this._commonHeaders();
@@ -201,7 +202,7 @@ export class HttpClientTransport implements Transport {
         signal: this._abortController.signal,
       };
 
-      const response = await fetch(this._url, init);
+      response = await fetch(this._url, init);
 
       if (!response.ok) {
         if (response.status === 401 && this._authProvider) {
@@ -220,7 +221,8 @@ export class HttpClientTransport implements Transport {
       // Handle streaming responses
       const contentType = response.headers.get("content-type");
       if (contentType?.includes("text/event-stream")) {
-        await this._handleStreamingResponse(response);
+        // Don't await streaming response handling - it will continue in the background
+        this._handleStreamingResponse(response);
         return;
       }
 
@@ -236,8 +238,10 @@ export class HttpClientTransport implements Transport {
       this.onerror?.(error as Error);
       throw error;
     } finally {
-      // Clean up the abort controller if it wasn't used
-      if (this._abortController) {
+      // Only clean up the abort controller for non-streaming responses
+      if (
+        !response?.headers.get("content-type")?.includes("text/event-stream")
+      ) {
         this._abortController = undefined;
       }
     }
