@@ -158,7 +158,7 @@ export class StatelessClientTransport implements Transport {
 
       // Handle streaming responses
       if (response.headers.get("content-type")?.includes("text/event-stream")) {
-        await this._handleStreamingResponse(response);
+        this._handleStreamingResponse(response);
         return;
       }
 

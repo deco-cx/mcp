@@ -76,10 +76,10 @@ export class StatelessServerTransport implements Transport {
   /**
    * Determines if a request should be upgraded to streaming based on message type
    */
-  private shouldUpgradeToStreaming(_message: JSONRPCMessage): boolean {
+  private shouldUpgradeToStreaming(message: JSONRPCMessage): boolean {
     // Implement logic to determine if streaming is needed
     // For example, based on method name or parameters
-    return false; // Default to non-streaming
+    return message.method === "notifications/initialized"; // Default to non-streaming
   }
 
   start(): Promise<void> {
@@ -87,9 +87,6 @@ export class StatelessServerTransport implements Transport {
   }
 
   close(): Promise<void> {
-    this._controller?.close();
-    this._controller = undefined;
-    this.onclose?.();
     return Promise.resolve();
   }
 
