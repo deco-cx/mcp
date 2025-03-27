@@ -31,6 +31,9 @@ export class HttpServerTransport implements Transport {
         this.onclose?.();
       },
     }).pipeThrough(new ServerSentEventStream());
+    // @(mcandeia) FIX ME implement this when the protocol is updated
+    this._controller?.close();
+    this._controller = undefined;
 
     return new Response(stream, {
       headers: {
