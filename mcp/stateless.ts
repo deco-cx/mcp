@@ -76,8 +76,7 @@ export class StatelessServerTransport implements Transport {
   /**
    * Determines if a request should be upgraded to streaming based on message type
    */
-  private shouldUpgradeToStreaming(message: JSONRPCMessage): boolean {
-    console.log({ message });
+  private shouldUpgradeToStreaming(_message: JSONRPCMessage): boolean {
     // Implement logic to determine if streaming is needed
     // For example, based on method name or parameters
     return false; // Default to non-streaming
