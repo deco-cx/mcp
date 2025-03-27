@@ -5,6 +5,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { ServerSentEventStream } from "@std/http";
 
+const SSE_STREAM_METHODS = ["notifications/initialized"];
 /**
  * Server transport for Stateless HTTP: this will handle messages over plain HTTP requests
  * with optional SSE upgrade for streaming responses.
@@ -79,7 +80,8 @@ export class StatelessServerTransport implements Transport {
   private shouldUpgradeToStreaming(message: JSONRPCMessage): boolean {
     // Implement logic to determine if streaming is needed
     // For example, based on method name or parameters
-    return message.method === "notifications/initialized"; // Default to non-streaming
+    return "method" in message && typeof message.method === "string" &&
+      SSE_STREAM_METHODS.includes(message.method);
   }
 
   start(): Promise<void> {
