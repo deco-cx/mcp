@@ -10,7 +10,7 @@ const SSE_STREAM_METHODS = ["notifications/initialized"];
  * Server transport for Stateless HTTP: this will handle messages over plain HTTP requests
  * with optional SSE upgrade for streaming responses.
  */
-export class StatelessServerTransport implements Transport {
+export class HttpServerTransport implements Transport {
   private _controller?: ReadableStreamDefaultController;
   private _responseResolver?: (response: Response) => void;
 

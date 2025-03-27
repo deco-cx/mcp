@@ -12,7 +12,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { SSEServerTransport } from "./sse.ts";
-import { StatelessServerTransport } from "./stateless.ts";
+import { HttpServerTransport } from "./http.ts";
 import { dereferenceSchema } from "./utils.ts";
 import { WebSocketServerTransport } from "./websocket.ts";
 
@@ -285,7 +285,7 @@ export function mcpServer<TManifest extends AppManifest>(
         return await transport.handlePostMessage(c.req.raw);
       }
       // For stateless transport
-      const transport = new StatelessServerTransport();
+      const transport = new HttpServerTransport();
       mcp.server.connect(transport);
       const response = await transport.handleMessage(c.req.raw);
       transport.close(); // Close the transport after handling the message

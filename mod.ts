@@ -1,2 +1,2 @@
 export { getTools, mcpServer, type Tool } from "./mcp/server.ts";
-export { StatelessClientTransport } from "./mcp/stateless-client.ts";
+export { HttpClientTransport } from "./mcp/http-client.ts";

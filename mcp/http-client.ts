@@ -12,7 +12,7 @@ import {
 /**
  * Configuration options for the `StatelessClientTransport`.
  */
-export type StatelessClientTransportOptions = {
+export type HttpClientTransportOptions = {
   /**
    * An OAuth client provider to use for authentication.
    */
@@ -28,7 +28,7 @@ export type StatelessClientTransportOptions = {
  * Client transport for Stateless HTTP: this will communicate with the server using HTTP requests
  * and handle both immediate responses and streaming responses when needed.
  */
-export class StatelessClientTransport implements Transport {
+export class HttpClientTransport implements Transport {
   private _abortController?: AbortController;
   private _eventSource?: EventSource;
   private _authProvider?: OAuthClientProvider;
@@ -40,7 +40,7 @@ export class StatelessClientTransport implements Transport {
 
   constructor(
     private _url: URL,
-    opts?: StatelessClientTransportOptions,
+    opts?: HttpClientTransportOptions,
   ) {
     this._authProvider = opts?.authProvider;
     this._requestInit = opts?.requestInit;
@@ -68,35 +68,71 @@ export class StatelessClientTransport implements Transport {
 
     try {
       while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        try {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
+          // Handle potential decoding errors
+          try {
+            buffer += decoder.decode(value, { stream: true });
+          } catch (decodeError) {
+            this.onerror?.(
+              new Error(`Failed to decode stream data: ${decodeError}`),
+            );
+            continue;
+          }
 
-        // Process complete SSE messages
-        const messages = buffer.split("\n\n");
-        buffer = messages.pop() || ""; // Keep incomplete message in buffer
+          // Process complete SSE messages
+          const messages = buffer.split("\n\n");
+          buffer = messages.pop() || ""; // Keep incomplete message in buffer
 
-        for (const message of messages) {
-          if (!message.trim()) continue;
+          for (const message of messages) {
+            if (!message.trim()) continue;
 
-          const lines = message.split("\n");
-          const data = lines.find((line) => line.startsWith("data: "))?.slice(
-            6,
-          );
-
-          if (data) {
             try {
-              const parsed = JSONRPCMessageSchema.parse(JSON.parse(data));
-              this.onmessage?.(parsed);
-            } catch (error) {
-              this.onerror?.(error as Error);
+              const lines = message.split("\n");
+              const data = lines.find((line) => line.startsWith("data: "))
+                ?.slice(6);
+
+              if (data) {
+                try {
+                  const parsed = JSONRPCMessageSchema.parse(JSON.parse(data));
+                  this.onmessage?.(parsed);
+                } catch (parseError) {
+                  this.onerror?.(
+                    new Error(`Failed to parse message data: ${parseError}`),
+                  );
+                }
+              }
+            } catch (messageError) {
+              this.onerror?.(
+                new Error(`Failed to process message: ${messageError}`),
+              );
+              // Continue processing other messages
+              continue;
             }
           }
+        } catch (readError) {
+          // Handle stream read errors
+          if (readError instanceof Error && readError.name === "AbortError") {
+            // Expected abort, break the loop
+            break;
+          }
+          this.onerror?.(
+            new Error(`Error reading from stream: ${String(readError)}`),
+          );
+          // Try to continue reading if possible
+          continue;
         }
       }
+    } catch (error) {
+      this.onerror?.(new Error(`Fatal streaming error: ${error}`));
     } finally {
-      reader.releaseLock();
+      try {
+        reader.releaseLock();
+      } catch (error) {
+        console.warn("Failed to release reader lock:", error);
+      }
     }
   }
 
@@ -119,13 +155,36 @@ export class StatelessClientTransport implements Transport {
   }
 
   close(): Promise<void> {
-    this._abortController?.abort();
-    this._eventSource?.close();
-    this.onclose?.();
+    try {
+      if (this._abortController) {
+        try {
+          this._abortController.abort();
+        } catch (error) {
+          console.warn("Failed to abort controller:", error);
+        }
+        this._abortController = undefined;
+      }
+
+      if (this._eventSource) {
+        try {
+          this._eventSource.close();
+        } catch (error) {
+          console.warn("Failed to close EventSource:", error);
+        }
+        this._eventSource = undefined;
+      }
+
+      this.onclose?.();
+    } catch (error) {
+      this.onerror?.(new Error(`Error during close: ${error}`));
+    }
     return Promise.resolve();
   }
 
   async send(message: JSONRPCMessage): Promise<void> {
+    // Create a new abort controller for this request
+    this._abortController = new AbortController();
+
     try {
       const commonHeaders = await this._commonHeaders();
       const headers = new Headers({
@@ -139,7 +198,7 @@ export class StatelessClientTransport implements Transport {
         method: "POST",
         headers,
         body: JSON.stringify(message),
-        signal: this._abortController?.signal,
+        signal: this._abortController.signal,
       };
 
       const response = await fetch(this._url, init);
@@ -150,25 +209,37 @@ export class StatelessClientTransport implements Transport {
           return;
         }
 
-        const text = await response.text().catch(() => null);
+        const text = await response.text().catch((error) =>
+          `Failed to read error response: ${error}`
+        );
         throw new Error(
           `Error POSTing to endpoint (HTTP ${response.status}): ${text}`,
         );
       }
 
       // Handle streaming responses
-      if (response.headers.get("content-type")?.includes("text/event-stream")) {
-        this._handleStreamingResponse(response);
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("text/event-stream")) {
+        await this._handleStreamingResponse(response);
         return;
       }
 
       // Handle immediate JSON responses
-      const responseData = await response.json();
-      const responseMessage = JSONRPCMessageSchema.parse(responseData);
-      this.onmessage?.(responseMessage);
+      try {
+        const responseData = await response.json();
+        const responseMessage = JSONRPCMessageSchema.parse(responseData);
+        this.onmessage?.(responseMessage);
+      } catch (error) {
+        throw new Error(`Failed to parse response: ${error}`);
+      }
     } catch (error) {
       this.onerror?.(error as Error);
       throw error;
+    } finally {
+      // Clean up the abort controller if it wasn't used
+      if (this._abortController) {
+        this._abortController = undefined;
+      }
     }
   }
 
