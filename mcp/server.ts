@@ -12,6 +12,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { SSEServerTransport } from "./sse.ts";
+import { StatelessServerTransport } from "./stateless.ts";
 import { dereferenceSchema } from "./utils.ts";
 import { WebSocketServerTransport } from "./websocket.ts";
 
@@ -244,51 +245,52 @@ export function mcpServer<TManifest extends AppManifest>(
 
   return async (c: Context, next: Next) => {
     const path = new URL(c.req.url).pathname;
+    const basePath = options?.basePath ?? "";
 
+    // Handle WebSocket upgrade if requested
     if (
-      path === `${options?.basePath ?? ""}/mcp/ws` &&
+      path === `${basePath}/mcp/ws` &&
       c.req.raw.headers.get("upgrade") === "websocket"
     ) {
       const { response, socket } = Deno.upgradeWebSocket(c.req.raw);
-
       const transport = new WebSocketServerTransport();
-
       transport.acceptWebSocket(socket);
       mcp.server.connect(transport);
-
       return response;
     }
 
-    if (path === `${options?.basePath ?? ""}/mcp/sse`) {
+    // Legacy SSE endpoint for backwards compatibility
+    if (path === `${basePath}/mcp/sse`) {
       const transport = new SSEServerTransport(
-        `${options?.basePath ?? ""}${MESSAGES_ENDPOINT}`,
+        `${basePath}${MESSAGES_ENDPOINT}`,
       );
       transports.set(transport.sessionId, transport);
-
       transport.onclose = () => {
         transports.delete(transport.sessionId);
       };
-
       const response = transport.createSSEResponse();
       mcp.server.connect(transport);
-
       return response;
     }
 
+    // Main message endpoint - handles both stateless requests and SSE upgrades
     if (path === `${options?.basePath ?? ""}${MESSAGES_ENDPOINT}`) {
       const sessionId = c.req.query("sessionId");
-      if (!sessionId) {
-        return c.json({ error: "Missing sessionId" }, 400);
-      }
+      if (sessionId) {
+        const transport = transports.get(sessionId);
+        if (!transport) {
+          return c.json({ error: "Invalid session" }, 404);
+        }
 
-      const transport = transports.get(sessionId);
-      if (!transport) {
-        return c.json({ error: "Invalid session" }, 404);
+        return await transport.handlePostMessage(c.req.raw);
       }
-
-      return await transport.handlePostMessage(c.req.raw);
+      // For stateless transport
+      const transport = new StatelessServerTransport();
+      mcp.server.connect(transport);
+      const response = await transport.handleMessage(c.req.raw);
+      transport.close(); // Close the transport after handling the message
+      return response;
     }
-
     await next();
   };
 }
