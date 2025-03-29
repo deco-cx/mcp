@@ -153,6 +153,10 @@ export const getTools = <TManifest extends AppManifest>(
         )
         : undefined;
 
+      const isInternal = (funcDefinition as { internal?: boolean })?.internal ??
+        (inputSchema as { internal?: boolean })?.internal ?? false;
+      if (isInternal) return;
+
       // Handle tool name slugification and clashes
       let toolName = (funcDefinition as { name?: string })?.name ??
         (inputSchema as { name?: string })?.name ?? slugify(resolveType);
