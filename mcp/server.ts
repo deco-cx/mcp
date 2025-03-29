@@ -15,7 +15,8 @@ import { SSEServerTransport } from "./sse.ts";
 import { HttpServerTransport } from "./http.ts";
 import { dereferenceSchema } from "./utils.ts";
 import { WebSocketServerTransport } from "./websocket.ts";
-
+import { compose, type RequestMiddleware } from "./middleware.ts";
+import type { z } from "zod";
 const idFromDefinition = (definition: string) => {
   const [_, __, id] = definition.split("/");
   return id;
@@ -50,6 +51,10 @@ export interface Options<TManifest extends AppManifest> {
   exclude?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>;
   blocks?: Array<keyof TManifest>;
   basePath?: string;
+  middlewares?: {
+    listTools?: ListToolsMiddleware[];
+    callTool?: CallToolMiddleware[];
+  };
 }
 
 interface RootSchema extends JSONSchema7 {
@@ -183,6 +188,20 @@ export const getTools = <TManifest extends AppManifest>(
   return tools.filter((tool) => tool !== undefined);
 };
 
+export interface ListToolsResult {
+  tools: Tool[];
+}
+
+export type ListToolsMiddleware = RequestMiddleware<
+  z.infer<typeof ListToolsRequestSchema>,
+  ListToolsResult
+>;
+
+export type CallToolMiddleware = RequestMiddleware<
+  z.infer<typeof CallToolRequestSchema>,
+  { content: { type: "text"; text: string }[] }
+>;
+
 function registerTools<TManifest extends AppManifest>(
   mcp: McpServer,
   deco: Deco<TManifest>,
@@ -190,7 +209,7 @@ function registerTools<TManifest extends AppManifest>(
 ) {
   // Add map to store slugified names to original names
   let toolNames: null | Map<string, string> = null;
-  const loadTools = async () => {
+  const loadTools: ListToolsMiddleware = async (): Promise<ListToolsResult> => {
     toolNames ??= new Map<string, string>();
     const meta = await deco.meta().then((v) => v?.value);
     if (!meta) return { tools: [] };
@@ -198,11 +217,16 @@ function registerTools<TManifest extends AppManifest>(
     return { tools: getTools(toolNames, schemas, options) };
   };
 
-  mcp.server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return await loadTools();
+  const listTools: ListToolsMiddleware = compose(
+    ...(options?.middlewares?.listTools ?? []),
+    loadTools,
+  );
+
+  mcp.server.setRequestHandler(ListToolsRequestSchema, async (request) => {
+    return await listTools(request);
   });
 
-  mcp.server.setRequestHandler(CallToolRequestSchema, async (req) => {
+  const invokeTool = async (req: z.infer<typeof CallToolRequestSchema>) => {
     IS_DEBUG && console.log(req);
     try {
       const state = await deco.prepareState({
@@ -213,7 +237,7 @@ function registerTools<TManifest extends AppManifest>(
       });
       // Use the original name from the map when invoking
       if (!toolNames) {
-        await loadTools();
+        await loadTools({ request: {} });
       }
       const originalName = toolNames!.get(req.params.name);
       if (!originalName) {
@@ -227,12 +251,21 @@ function registerTools<TManifest extends AppManifest>(
         state,
       );
       return {
-        content: [{ type: "text", text: JSON.stringify(result) }],
+        content: [{ type: "text" as const, text: JSON.stringify(result) }],
       };
     } catch (err) {
       console.error(err);
       throw err;
     }
+  };
+
+  const callToolMiddleware: CallToolMiddleware = compose(
+    ...(options?.middlewares?.callTool ?? []),
+    invokeTool,
+  );
+
+  mcp.server.setRequestHandler(CallToolRequestSchema, async (req) => {
+    return await callToolMiddleware(req);
   });
 }
 

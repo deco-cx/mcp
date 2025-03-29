@@ -94,6 +94,10 @@ export function dereferenceSchema(
     );
   }
 
+  if ("allOf" in result && !Array.isArray(result.allOf)) {
+    delete result.allOf;
+  }
+
   return result;
 }
 
