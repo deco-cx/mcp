@@ -190,6 +190,7 @@ export const getTools = <TManifest extends AppManifest>(
 
 export interface ListToolsResult {
   tools: Tool[];
+  [key: string]: unknown;
 }
 
 export type ListToolsMiddleware = RequestMiddleware<
@@ -209,7 +210,7 @@ function registerTools<TManifest extends AppManifest>(
 ) {
   // Add map to store slugified names to original names
   let toolNames: null | Map<string, string> = null;
-  const loadTools: ListToolsMiddleware = async (): Promise<ListToolsResult> => {
+  const loadTools = async (): Promise<ListToolsResult> => {
     toolNames ??= new Map<string, string>();
     const meta = await deco.meta().then((v) => v?.value);
     if (!meta) return { tools: [] };
@@ -237,7 +238,7 @@ function registerTools<TManifest extends AppManifest>(
       });
       // Use the original name from the map when invoking
       if (!toolNames) {
-        await loadTools({ request: {} });
+        await loadTools();
       }
       const originalName = toolNames!.get(req.params.name);
       if (!originalName) {
