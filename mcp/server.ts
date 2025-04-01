@@ -68,6 +68,7 @@ const slugify = (name: string) => {
 };
 export interface Tool {
   name: string;
+  icon?: string;
   resolveType: string;
   description: string;
   outputSchema: JSONSchema7;
@@ -178,11 +179,15 @@ export const getTools = <TManifest extends AppManifest>(
             additionalProperties: true,
           };
       };
+
+      const icon = (funcDefinition as { logo?: string }).logo;
+
       return {
         name: toolName,
         resolveType,
         description: funcDefinition.description ?? inputSchema?.description ??
           resolveType,
+        icon,
         outputSchema: normalizeSchema(outputSchema),
         inputSchema: normalizeSchema(inputSchema),
       };
