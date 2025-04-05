@@ -55,6 +55,7 @@ export interface Options<TManifest extends AppManifest> {
     listTools?: ListToolsMiddleware[];
     callTool?: CallToolMiddleware[];
   };
+  getState?: () => unknown;
 }
 
 interface RootSchema extends JSONSchema7 {
@@ -244,6 +245,7 @@ function registerTools<TManifest extends AppManifest>(
           raw: new Request("http://localhost:8000"),
           param: () => ({}),
         },
+        base: options?.getState?.(),
       });
       // Use the original name from the map when invoking
       if (!toolNames) {
