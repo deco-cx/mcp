@@ -2,6 +2,7 @@ import {
   type AppManifest,
   context,
   type Deco,
+  type DecoMiddlewareContext,
   type JSONSchema7,
   type Schemas,
 } from "@deco/deco";
@@ -17,6 +18,7 @@ import { dereferenceSchema } from "./utils.ts";
 import { WebSocketServerTransport } from "./websocket.ts";
 import { compose, type RequestMiddleware } from "./middleware.ts";
 import type { z } from "zod";
+import { State } from "./state.ts";
 const idFromDefinition = (definition: string) => {
   const [_, __, id] = definition.split("/");
   return id;
@@ -239,7 +241,7 @@ function registerTools<TManifest extends AppManifest>(
   const invokeTool = async (req: z.infer<typeof CallToolRequestSchema>) => {
     IS_DEBUG && console.log(req);
     try {
-      const state = await deco.prepareState({
+      const state = State.active() ?? await deco.prepareState({
         req: {
           raw: new Request("http://localhost:8000"),
           param: () => ({}),
@@ -286,7 +288,8 @@ export function mcpServer<TManifest extends AppManifest>(
 ): MiddlewareHandler {
   const { mcp, transports } = setupMcpServer(deco, options);
 
-  return async (c: Context, next: Next) => {
+  return async (_c: Context, next: Next) => {
+    const c = _c as DecoMiddlewareContext;
     const path = new URL(c.req.url).pathname;
     const basePath = options?.basePath ?? "";
 
@@ -330,7 +333,11 @@ export function mcpServer<TManifest extends AppManifest>(
       // For stateless transport
       const transport = new HttpServerTransport();
       mcp.server.connect(transport);
-      const response = await transport.handleMessage(c.req.raw);
+      const handleMessage = State.bind(c.var, async () => {
+        return await transport.handleMessage(c.req.raw);
+      });
+
+      const response = await handleMessage();
       transport.close(); // Close the transport after handling the message
       return response;
     }
