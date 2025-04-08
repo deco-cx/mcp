@@ -22,13 +22,14 @@ import manifest, { Manifest } from "./manifest.gen.ts";
 import { mcpServer } from "@deco/mcp";
 
 const app = new Hono();
-const deco = await Deco.init<Manifest>({ manifest });
+const deco = await Deco.init<Manifest>({
+  manifest,
+  // Add MCP server middleware
+  useServer: (deco, hono) => {
+    hono.use("/*", mcpServer(deco)); // hono.use("/*", mcpServer<Manifest>(deco, { include: ["site/loaders/helloWorld.ts"] })); // only hello world will be available
+  },
+});
 const envPort = Deno.env.get("PORT");
-
-// Add MCP server middleware
-app.use("/*", mcpServer(deco));
-// optionally you can select tools
-// app.use("/*", mcpServer<Manifest>(deco, { include: ["site/loaders/helloWorld.ts"] })); // only hello world will be available
 
 // Handle all routes with Deco
 app.all("/*", async (c) => c.res = await deco.fetch(c.req.raw));
@@ -53,7 +54,7 @@ export default defineConfig({
     manifest,
     htmx: true,
     useServer: (deco, hono) => {
-      hono.use("/*", mcpServer(deco as any)); // some type errors may occur
+      hono.use("/*", mcpServer(deco));
     },
   }),
 });
@@ -63,6 +64,14 @@ export default defineConfig({
 
 Add the MCP server as a SSE endpoint using the production domain:
 https://sites-mcp.decocdn.com/mcp/sse
+
+or HTTP version
+
+https://sites-mcp.decocdn.com/mcp/messages
+
+or WebSocket version
+
+https://sites-mcp.decocdn.com/mcp/ws
 
 <img width="1718" alt="image" src="https://github.com/user-attachments/assets/8a94dd3b-be41-48b5-98db-22ddae16391f" />
 

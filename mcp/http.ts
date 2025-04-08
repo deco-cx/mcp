@@ -48,7 +48,9 @@ export class HttpServerTransport implements Transport {
   /**
    * Handles incoming HTTP messages
    */
-  async handleMessage(request: Request): Promise<Response> {
+  async handleMessage(
+    request: Request,
+  ): Promise<Response> {
     try {
       const contentTypeHeader = request.headers.get("content-type");
       if (!contentTypeHeader?.includes("application/json")) {
@@ -56,7 +58,7 @@ export class HttpServerTransport implements Transport {
       }
 
       const body = await request.json();
-      const message = JSONRPCMessageSchema.parse(body);
+      const message: JSONRPCMessage = JSONRPCMessageSchema.parse(body);
 
       // Handle the message
       this.onmessage?.(message);
