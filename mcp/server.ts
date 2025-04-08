@@ -328,7 +328,11 @@ export function mcpServer<TManifest extends AppManifest>(
           return c.json({ error: "Invalid session" }, 404);
         }
 
-        return await transport.handlePostMessage(c.req.raw);
+        const handleMessage = State.bind(c.var, async () => {
+          return await transport.handlePostMessage(c.req.raw);
+        });
+
+        return await handleMessage();
       }
       // For stateless transport
       const transport = new HttpServerTransport();
