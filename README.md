@@ -24,9 +24,11 @@ import { mcpServer } from "@deco/mcp";
 const app = new Hono();
 const deco = await Deco.init<Manifest>({
   manifest,
-  // Add MCP server middleware
-  useServer: (deco, hono) => {
-    hono.use("/*", mcpServer(deco)); // hono.use("/*", mcpServer<Manifest>(deco, { include: ["site/loaders/helloWorld.ts"] })); // only hello world will be available
+  bindings: {
+    // Add MCP server middleware
+    useServer: (deco, hono) => {
+      hono.use("/*", mcpServer(deco)); // hono.use("/*", mcpServer<Manifest>(deco, { include: ["site/loaders/helloWorld.ts"] })); // only hello world will be available
+    },
   },
 });
 const envPort = Deno.env.get("PORT");
