@@ -27,11 +27,19 @@ export function dereferenceSchema(
     }
     visited.add(refId);
     const referencedSchema = definitions[refId];
-    return dereferenceSchema(
-      referencedSchema as JSONSchema7,
-      definitions,
-      visited,
-    );
+    
+    // Save the original schema metadata (excluding $ref)
+    const { $ref, ...originalMetadata } = schema;
+    
+    // Merge the original metadata with the dereferenced schema
+    return {
+      ...originalMetadata,
+      ...dereferenceSchema(
+        referencedSchema as JSONSchema7,
+        definitions,
+        visited,
+      ),
+    };
   }
 
   const result: JSONSchema7 = { ...schema };
