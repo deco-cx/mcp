@@ -162,7 +162,8 @@ export const getTools = <TManifest extends AppManifest>(
 
       // Handle tool name slugification and clashes
       let toolName = (funcDefinition as { name?: string })?.name ??
-        (inputSchema as { name?: string })?.name ?? slugify(resolveType);
+        (inputSchema as { name?: string })?.name ??
+        slugify(funcDefinition.title ?? resolveType);
       let idx = 1;
 
       while (
