@@ -282,7 +282,6 @@ function registerTools<TManifest extends AppManifest>(
   });
 }
 
-const UNAUTHORIZED_PATHS = ["/live/release", "/.decofile"];
 const MESSAGES_ENDPOINT = "/mcp/messages";
 export function mcpServer<TManifest extends AppManifest>(
   deco: Deco<TManifest>,
@@ -346,9 +345,6 @@ export function mcpServer<TManifest extends AppManifest>(
       const response = await handleMessage();
       transport.close(); // Close the transport after handling the message
       return response;
-    }
-    if (UNAUTHORIZED_PATHS.some((p) => path.startsWith(p))) {
-      return c.json({ error: "Unauthorized" }, 401);
     }
     await next();
   };
