@@ -29,7 +29,7 @@ export function dereferenceSchema(
     const referencedSchema = definitions[refId];
 
     // Save the original schema metadata (excluding $ref)
-    const { $ref, ...originalMetadata } = schema;
+    const { $ref: _, ...originalMetadata } = schema;
 
     // Merge the original metadata with the dereferenced schema
     return {
