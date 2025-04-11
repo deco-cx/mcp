@@ -27,10 +27,10 @@ export function dereferenceSchema(
     }
     visited.add(refId);
     const referencedSchema = definitions[refId];
-    
+
     // Save the original schema metadata (excluding $ref)
     const { $ref, ...originalMetadata } = schema;
-    
+
     // Merge the original metadata with the dereferenced schema
     return {
       ...originalMetadata,
