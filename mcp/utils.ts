@@ -44,15 +44,50 @@ export function dereferenceSchema(
 
   const result: JSONSchema7 = { ...schema };
 
-  // Handle allOf
-  if (result.allOf) {
-    result.allOf = result.allOf.map((subSchema: any) =>
+  // Handle arrays with items
+  if (result.type === "array" && result.items) {
+    result.items = dereferenceSchema(
+      result.items as JSONSchema7,
+      definitions,
+      visited,
+    ) as JSONSchema7;
+  }
+
+  // Handle and merge allOf into the main schema
+  if (result.allOf && Array.isArray(result.allOf) && result.allOf.length > 0) {
+    // First dereference all schemas in allOf
+    const dereferencedAllOf = result.allOf.map((subSchema: any) =>
       dereferenceSchema(
         subSchema as JSONSchema7,
         definitions,
         visited,
-      )
-    ) as JSONSchema7[];
+      ) as JSONSchema7
+    );
+    
+    // Merge all properties from allOf schemas into the main schema
+    for (const subSchema of dereferencedAllOf) {
+      // Merge properties if they exist
+      if (subSchema.properties) {
+        result.properties = {
+          ...(result.properties || {}),
+          ...(subSchema.properties || {}),
+        };
+      }
+      
+      // Merge required fields if they exist
+      if (subSchema.required && Array.isArray(subSchema.required)) {
+        result.required = [
+          ...(result.required || []),
+          ...subSchema.required,
+        ];
+      }
+    }
+    
+    // Remove the allOf array since we've merged its contents
+    delete result.allOf;
+  } else if (result.allOf && !Array.isArray(result.allOf)) {
+    // Handle case where allOf is not an array
+    delete result.allOf;
   }
 
   // Handle anyOf
@@ -100,10 +135,6 @@ export function dereferenceSchema(
       definitions,
       visited,
     );
-  }
-
-  if ("allOf" in result && !Array.isArray(result.allOf)) {
-    delete result.allOf;
   }
 
   return result;
