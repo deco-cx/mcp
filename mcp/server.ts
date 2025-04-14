@@ -134,7 +134,7 @@ export const getTools = <TManifest extends AppManifest>(
       // Dereference the input schema
       const inputSchema = rawInputSchema
         ? dereferenceSchema(
-          rawInputSchema as JSONSchema7,
+          {...rawInputSchema, log: funcDefinition.title?.includes('Create Highlights') } as JSONSchema7,
           schemas.definitions,
         )
         : undefined;

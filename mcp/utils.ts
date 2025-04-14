@@ -6,6 +6,10 @@ export function dereferenceSchema(
   definitions: { [key: string]: JSONSchema7 },
   visited = new Set<string>(),
 ): JSONSchema7 | undefined {
+  if (schema?.log) {
+    console.log({ schema });
+    console.log(definitions['aHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2RlY28tY3gvYXBwc0AwLjc0LjAvcmVhZHdpc2UvY2xpZW50LnRz@HighlightItem']);
+  }
   if (!schema) return undefined;
 
   // Handle array types by converting to anyOf
@@ -43,6 +47,15 @@ export function dereferenceSchema(
   }
 
   const result: JSONSchema7 = { ...schema };
+
+  // Handle arrays with items
+  if (result.type === "array" && result.items) {
+    result.items = dereferenceSchema(
+      result.items as JSONSchema7,
+      definitions,
+      visited,
+    ) as JSONSchema7;
+  }
 
   // Handle allOf
   if (result.allOf) {
