@@ -63,7 +63,7 @@ export function dereferenceSchema(
         visited,
       ) as JSONSchema7
     );
-    
+
     // Merge all properties from allOf schemas into the main schema
     for (const subSchema of dereferencedAllOf) {
       // Merge properties if they exist
@@ -73,7 +73,7 @@ export function dereferenceSchema(
           ...(subSchema.properties || {}),
         };
       }
-      
+
       // Merge required fields if they exist
       if (subSchema.required && Array.isArray(subSchema.required)) {
         result.required = [
@@ -82,7 +82,7 @@ export function dereferenceSchema(
         ];
       }
     }
-    
+
     // Remove the allOf array since we've merged its contents
     delete result.allOf;
   } else if (result.allOf && !Array.isArray(result.allOf)) {

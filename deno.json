@@ -1,7 +1,10 @@
 {
   "name": "@deco/mcp",
   "version": "0.3.5",
-  "exports": "./mod.ts",
+  "exports": {
+    ".": "./mod.ts",
+    "./http": "./mcp/http.ts"
+  },
   "tasks": {
     "check": "deno fmt && deno lint && deno check mod.ts"
   },
