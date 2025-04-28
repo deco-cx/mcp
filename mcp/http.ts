@@ -3,7 +3,7 @@ import {
   type JSONRPCMessage,
   JSONRPCMessageSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { ServerSentEventStream } from "@std/http";
+import { ServerSentEventStream } from "@std/http/server-sent-event-stream";
 
 const SSE_STREAM_METHODS = ["notifications/initialized"];
 /**
