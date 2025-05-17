@@ -337,7 +337,7 @@ export function mcpServer<TManifest extends AppManifest>(
       }
       // For stateless transport
       const transport = new HttpServerTransport();
-      mcp.server.connect(transport);
+      await mcp.server.connect(transport);
       const handleMessage = State.bind(c.var, async () => {
         return await transport.handleMessage(c.req.raw);
       });

@@ -14,8 +14,7 @@ export class HttpServerTransport extends StreamableHTTPServerTransport {
   ) {
     super({
       ...options,
-      sessionIdGenerator: options?.sessionIdGenerator ??
-        (() => crypto.randomUUID()),
+      sessionIdGenerator: options?.sessionIdGenerator,
     });
   }
 
