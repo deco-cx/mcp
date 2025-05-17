@@ -12,13 +12,13 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { SSEServerTransport } from "./sse.ts";
+import type { z } from "zod";
 import { HttpServerTransport } from "./http.ts";
+import { compose, type RequestMiddleware } from "./middleware.ts";
+import { SSEServerTransport } from "./sse.ts";
+import { State } from "./state.ts";
 import { dereferenceSchema } from "./utils.ts";
 import { WebSocketServerTransport } from "./websocket.ts";
-import { compose, type RequestMiddleware } from "./middleware.ts";
-import type { z } from "zod";
-import { State } from "./state.ts";
 const idFromDefinition = (definition: string) => {
   const [_, __, id] = definition.split("/");
   return id;

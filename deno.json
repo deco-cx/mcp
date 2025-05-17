@@ -1,6 +1,6 @@
 {
   "name": "@deco/mcp",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "exports": {
     ".": "./mod.ts",
     "./http": "./mcp/http.ts"
@@ -10,9 +10,10 @@
   },
   "imports": {
     "@deco/deco": "jsr:@deco/deco@^1.112.1",
-    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@^1.6.1",
+    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@^1.11.2",
     "@hono/hono": "jsr:@hono/hono@^4.5.4",
     "@std/http": "jsr:@std/http@^1.0.13",
-    "zod": "npm:zod@^3.24.2"
+    "zod": "npm:zod@^3.24.2",
+    "fetch-to-node": "npm:fetch-to-node@^2.1.0"
   }
 }
