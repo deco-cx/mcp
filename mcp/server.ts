@@ -72,6 +72,7 @@ export interface Tool {
   name: string;
   icon?: string;
   resolveType: string;
+  appName?: string;
   description: string;
   outputSchema: JSONSchema7;
   inputSchema: JSONSchema7;
@@ -81,6 +82,7 @@ export const getTools = <TManifest extends AppManifest>(
   toolNames: Map<string, string>,
   schemas?: Schemas,
   options?: Options<TManifest>,
+  apps?: Record<string, { namespace: string }>,
 ): Tool[] => {
   if (!schemas) return [];
 
@@ -188,6 +190,7 @@ export const getTools = <TManifest extends AppManifest>(
       return {
         name: toolName,
         resolveType,
+        appName: apps?.[resolveType]?.namespace,
         description: funcDefinition.description ?? inputSchema?.description ??
           resolveType,
         icon,
@@ -227,7 +230,14 @@ function registerTools<TManifest extends AppManifest>(
     const meta = await deco.meta().then((v) => v?.value);
     if (!meta) return { tools: [] };
     const schemas = meta.schema;
-    return { tools: getTools(toolNames, schemas, options) };
+    return {
+      tools: getTools(
+        toolNames,
+        schemas,
+        options,
+        meta?.manifest?.blocks?.apps,
+      ),
+    };
   };
 
   const listTools: ListToolsMiddleware = compose(
