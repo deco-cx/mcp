@@ -215,7 +215,8 @@ export type ListToolsMiddleware = RequestMiddleware<
 
 export type CallToolMiddleware = RequestMiddleware<
   z.infer<typeof CallToolRequestSchema>,
-  { content: { type: "text"; text: string }[] }
+  // deno-lint-ignore no-explicit-any
+  { structuredContent: any }
 >;
 
 function registerTools<TManifest extends AppManifest>(
