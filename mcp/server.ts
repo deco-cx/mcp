@@ -273,9 +273,7 @@ function registerTools<TManifest extends AppManifest>(
         undefined,
         state,
       );
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(result) }],
-      };
+      return { structuredContent: result };
     } catch (err) {
       console.error(err);
       throw err;
