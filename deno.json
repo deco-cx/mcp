@@ -1,6 +1,6 @@
 {
   "name": "@deco/mcp",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "exports": {
     ".": "./mod.ts",
     "./http": "./mcp/http.ts"
