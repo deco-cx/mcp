@@ -10,8 +10,10 @@ import type { Context, MiddlewareHandler, Next } from "@hono/hono";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   CallToolRequestSchema,
+  type CallToolResultSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+
 import type { z } from "zod";
 import { HttpServerTransport } from "./http.ts";
 import { compose, type RequestMiddleware } from "./middleware.ts";
@@ -215,8 +217,7 @@ export type ListToolsMiddleware = RequestMiddleware<
 
 export type CallToolMiddleware = RequestMiddleware<
   z.infer<typeof CallToolRequestSchema>,
-  // deno-lint-ignore no-explicit-any
-  { structuredContent: any }
+  z.infer<typeof CallToolResultSchema>
 >;
 
 function registerTools<TManifest extends AppManifest>(
@@ -250,7 +251,9 @@ function registerTools<TManifest extends AppManifest>(
     return await listTools(request);
   });
 
-  const invokeTool = async (req: z.infer<typeof CallToolRequestSchema>) => {
+  const invokeTool = async (
+    req: z.infer<typeof CallToolRequestSchema>,
+  ): Promise<z.infer<typeof CallToolResultSchema>> => {
     IS_DEBUG && console.log(req);
     try {
       const state = State.active() ?? await deco.prepareState({
@@ -274,10 +277,18 @@ function registerTools<TManifest extends AppManifest>(
         undefined,
         state,
       );
-      return { structuredContent: result };
+      // deno-lint-ignore no-explicit-any
+      return {
+        isError: false,
+        structuredContent: result as any,
+      };
     } catch (err) {
-      console.error(err);
-      throw err;
+      return {
+        isError: true,
+        structuredContent: {
+          message: err instanceof Error ? err.message : `${err}`,
+        },
+      };
     }
   };
 
