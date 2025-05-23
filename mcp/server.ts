@@ -13,14 +13,13 @@ import {
   type CallToolResultSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-
 import type { z } from "zod";
 import { HttpServerTransport } from "./http.ts";
 import { compose, type RequestMiddleware } from "./middleware.ts";
-import { SSEServerTransport } from "./sse.ts";
 import { State } from "./state.ts";
 import { dereferenceSchema } from "./utils.ts";
 import { WebSocketServerTransport } from "./websocket.ts";
+
 const idFromDefinition = (definition: string) => {
   const [_, __, id] = definition.split("/");
   return id;
@@ -44,10 +43,7 @@ function setupMcpServer<TManifest extends AppManifest>(
 
   registerTools(mcp, deco, options);
 
-  // Store active SSE connections
-  const transports = new Map<string, SSEServerTransport>();
-
-  return { mcp, transports };
+  return { mcp };
 }
 
 export interface Options<TManifest extends AppManifest> {
@@ -277,16 +273,19 @@ function registerTools<TManifest extends AppManifest>(
         undefined,
         state,
       );
-      // deno-lint-ignore no-explicit-any
       return {
         isError: false,
+        // deno-lint-ignore no-explicit-any
         structuredContent: result as any,
       };
     } catch (err) {
+      console.error(err);
+
       return {
         isError: true,
         structuredContent: {
           message: err instanceof Error ? err.message : `${err}`,
+          stack: err instanceof Error ? err.stack : undefined,
         },
       };
     }
@@ -307,9 +306,8 @@ export function mcpServer<TManifest extends AppManifest>(
   deco: Deco<TManifest>,
   options?: Options<TManifest>,
 ): MiddlewareHandler {
-  const { mcp, transports } = setupMcpServer(deco, options);
-
   return async (_c: Context, next: Next) => {
+    const { mcp } = setupMcpServer(deco, options);
     const c = _c as DecoMiddlewareContext;
     const path = new URL(c.req.url).pathname;
     const basePath = options?.basePath ?? "";
@@ -326,35 +324,8 @@ export function mcpServer<TManifest extends AppManifest>(
       return response;
     }
 
-    // Legacy SSE endpoint for backwards compatibility
-    if (path === `${basePath}/mcp/sse`) {
-      const transport = new SSEServerTransport(
-        `${basePath}${MESSAGES_ENDPOINT}`,
-      );
-      transports.set(transport.sessionId, transport);
-      transport.onclose = () => {
-        transports.delete(transport.sessionId);
-      };
-      const response = transport.createSSEResponse();
-      mcp.server.connect(transport);
-      return response;
-    }
-
     // Main message endpoint - handles both stateless requests and SSE upgrades
     if (path === `${options?.basePath ?? ""}${MESSAGES_ENDPOINT}`) {
-      const sessionId = c.req.query("sessionId");
-      if (sessionId) {
-        const transport = transports.get(sessionId);
-        if (!transport) {
-          return c.json({ error: "Invalid session" }, 404);
-        }
-
-        const handleMessage = State.bind(c.var, async () => {
-          return await transport.handlePostMessage(c.req.raw);
-        });
-
-        return await handleMessage();
-      }
       // For stateless transport
       const transport = new HttpServerTransport();
       await mcp.server.connect(transport);
