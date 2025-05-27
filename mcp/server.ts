@@ -284,6 +284,9 @@ function registerTools<TManifest extends AppManifest>(
       return {
         isError: true,
         structuredContent: {
+          status: typeof err === "object" && err !== null && "status" in err
+            ? (err as { status: string }).status
+            : undefined,
           message: err instanceof Error ? err.message : `${err}`,
           stack: err instanceof Error ? err.stack : undefined,
         },
