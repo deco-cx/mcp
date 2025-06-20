@@ -315,6 +315,10 @@ export function mcpServer<TManifest extends AppManifest>(
     const path = new URL(c.req.url).pathname;
     const basePath = options?.basePath ?? "";
 
+    const global = (c.var.global ?? {}) as Record<string, unknown>;
+    global.mcpServer = mcp;
+    c.set("global", global);
+
     // Handle WebSocket upgrade if requested
     if (
       path === `${basePath}/mcp/ws` &&
