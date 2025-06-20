@@ -93,6 +93,15 @@ export const getTools = <TManifest extends AppManifest>(
     return "anyOf" in blockSchema ? blockSchema.anyOf ?? [] : [];
   });
 
+  // Check if any function has @tool annotation for graceful migration
+  const hasAnyToolAnnotations = availableFunctions.some((func) => {
+    func = func as RootSchema;
+    if (!func.$ref || func.$ref === RESOLVABLE_DEFINITION) return false;
+    const funcDefinition = schemas.definitions[idFromDefinition(func.$ref)];
+
+    return (funcDefinition as { tool?: boolean })?.tool ?? false;
+  });
+
   const tools = availableFunctions.map(
     (func) => {
       func = func as RootSchema;
@@ -102,19 +111,26 @@ export const getTools = <TManifest extends AppManifest>(
         (funcDefinition.properties?.__resolveType as { default: string })
           .default;
 
-      if (
-        options?.include &&
-        !options.include.includes(
-          resolveType as typeof options.include[number],
-        )
-      ) return;
+      if (hasAnyToolAnnotations) {
+        // New behavior: only expose functions with @tool annotation
+        const isTool = (funcDefinition as { tool?: boolean })?.tool ?? false;
+        if (!isTool) return;
+      } else {
+        // Legacy behavior: use include/exclude options and internal flag
+        if (
+          options?.include &&
+          !options.include.includes(
+            resolveType as typeof options.include[number],
+          )
+        ) return;
 
-      if (
-        options?.exclude &&
-        options.exclude.includes(
-          resolveType as typeof options.exclude[number],
-        )
-      ) return;
+        if (
+          options?.exclude &&
+          options.exclude.includes(
+            resolveType as typeof options.exclude[number],
+          )
+        ) return;
+      }
 
       const getInputSchemaId = () => {
         if ("inputSchema" in func) {
@@ -156,9 +172,13 @@ export const getTools = <TManifest extends AppManifest>(
         )
         : undefined;
 
-      const isInternal = (funcDefinition as { internal?: boolean })?.internal ??
-        (inputSchema as { internal?: boolean })?.internal ?? false;
-      if (isInternal) return;
+      // Only check internal flag in legacy mode (when no @tool annotations exist)
+      if (!hasAnyToolAnnotations) {
+        const isInternal =
+          (funcDefinition as { internal?: boolean })?.internal ??
+            (inputSchema as { internal?: boolean })?.internal ?? false;
+        if (isInternal) return;
+      }
 
       // Handle tool name slugification and clashes
       let toolName = (funcDefinition as { name?: string })?.name ??
