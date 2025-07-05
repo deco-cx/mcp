@@ -51,6 +51,10 @@ export interface Options<TManifest extends AppManifest> {
   exclude?: Array<keyof (TManifest["actions"] & TManifest["loaders"])>;
   blocks?: Array<keyof TManifest>;
   basePath?: string;
+  /**
+   * Custom path for MCP messages endpoint. Defaults to /mcp/messages if not provided.
+   */
+  mcpPath?: string;
   middlewares?: {
     listTools?: ListToolsMiddleware[];
     callTool?: CallToolMiddleware[];
@@ -328,7 +332,8 @@ export function mcpServer<TManifest extends AppManifest>(
     }
 
     // Main message endpoint - handles both stateless requests and SSE upgrades
-    if (path === `${options?.basePath ?? ""}${MESSAGES_ENDPOINT}`) {
+    const mcpPath = options?.mcpPath ?? MESSAGES_ENDPOINT;
+    if (path === `${options?.basePath ?? ""}${mcpPath}`) {
       // For stateless transport
       const transport = new HttpServerTransport();
       await mcp.server.connect(transport);
