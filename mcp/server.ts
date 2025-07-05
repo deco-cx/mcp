@@ -277,7 +277,9 @@ function registerTools<TManifest extends AppManifest>(
         undefined,
         state,
       );
+
       return {
+        content: [{ type: "text" as const, text: JSON.stringify(result) }],
         isError: false,
         // deno-lint-ignore no-explicit-any
         structuredContent: result as any,
