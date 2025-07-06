@@ -336,6 +336,441 @@ export function mcpServer<TManifest extends AppManifest>(
     // Main message endpoint - handles both stateless requests and SSE upgrades
     const mcpPath = options?.mcpPath ?? MESSAGES_ENDPOINT;
     if (path === `${options?.basePath ?? ""}${mcpPath}`) {
+      // Check if this is a browser request (HTML acceptance)
+      const acceptHeader = c.req.header("accept") || "";
+      const isHTMLRequest = acceptHeader.includes("text/html");
+      
+      if (isHTMLRequest) {
+        // Return HTML page for browser requests
+        const currentUrl = c.req.url;
+        
+        // Get tools data directly
+        const meta = await deco.meta().then((v) => v?.value);
+        const tools = meta ? getTools(new Map<string, string>(), meta.schema, options, meta?.manifest?.blocks?.apps) : [];
+        const toolsHtml = tools.length > 0 
+          ? tools.map((tool: Tool) => `
+              <div class="tool-card">
+                <div class="tool-name">${tool.name}</div>
+                <div class="tool-description">${tool.description || 'No description available'}</div>
+                ${tool.appName ? `<div class="tool-app">${tool.appName}</div>` : ''}
+              </div>
+            `).join('')
+          : '<div class="no-tools">No tools available</div>';
+        const htmlResponse = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            line-height: 1.6;
+            color: #000000;
+        }
+        
+        .container {
+            background: #ffffff;
+            border: 2px solid #000000;
+            padding: 80px 60px;
+            max-width: 720px;
+            width: 100%;
+            position: relative;
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: -8px;
+            bottom: -8px;
+            background: #000000;
+            z-index: -1;
+        }
+        
+        .header {
+            margin-bottom: 60px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #000000;
+            font-size: 3.5rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        
+        .mcp-link {
+            color: #000000;
+            text-decoration: none;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .mcp-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: #000000;
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.3s ease;
+        }
+        
+        .mcp-link:hover::after {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+        
+        .subtitle {
+            color: #666666;
+            font-size: 1.25rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        
+        .url-section {
+            margin-bottom: 60px;
+        }
+        
+        .tools-section {
+            margin-bottom: 60px;
+        }
+        
+        .tools-section h2 {
+            color: #000000;
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+
+        
+        .tools-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .tool-card {
+            border: 2px solid #000000;
+            padding: 24px;
+            background: #ffffff;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: -4px;
+            bottom: -4px;
+            background: #000000;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .tool-card:hover::before {
+            opacity: 1;
+        }
+        
+        .tool-card:hover {
+            transform: translate(-4px, -4px);
+        }
+        
+        .tool-card:hover .tool-name {
+            color: #ffffff;
+        }
+        
+        .tool-card:hover .tool-description {
+            color: #cccccc;
+        }
+        
+        .tool-card:hover .tool-app {
+            color: #000000;
+            background: #ffffff;
+        }
+        
+        .tool-name {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        
+        .tool-description {
+            color: #666666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .tool-app {
+            font-size: 0.8rem;
+            color: #000000;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 1px solid #000000;
+            padding: 4px 8px;
+            display: inline-block;
+            background: #f5f5f5;
+        }
+        
+        .no-tools {
+            text-align: center;
+            color: #666666;
+            font-style: italic;
+            padding: 40px;
+        }
+        
+        .url-section label {
+            display: block;
+            margin-bottom: 20px;
+            font-weight: 700;
+            color: #000000;
+            font-size: 1.125rem;
+            letter-spacing: -0.01em;
+        }
+        
+        .url-input-container {
+            display: flex;
+            gap: 16px;
+            align-items: stretch;
+            margin-bottom: 20px;
+        }
+        
+        .url-input {
+            flex: 1;
+            padding: 18px 24px;
+            border: 2px solid #000000;
+            font-size: 16px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            background-color: #f5f5f5;
+            color: #000000;
+            transition: all 0.2s ease;
+        }
+        
+        .url-input:focus {
+            outline: none;
+            background-color: #ffffff;
+        }
+        
+        .copy-button {
+            padding: 18px 32px;
+            background: #000000;
+            color: #ffffff;
+            border: 2px solid #000000;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .copy-button:hover {
+            background: #ffffff;
+            color: #000000;
+        }
+        
+        .copy-button:active {
+            transform: scale(0.98);
+        }
+        
+        .success-message {
+            padding: 16px 24px;
+            background: #000000;
+            color: #ffffff;
+            font-weight: 600;
+            display: none;
+            text-align: center;
+            letter-spacing: 0.02em;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .footer {
+            text-align: center;
+            padding-top: 40px;
+            border-top: 2px solid #000000;
+        }
+        
+        .deco-logo {
+            width: 140px;
+            height: auto;
+            margin-bottom: 20px;
+            filter: grayscale(100%) contrast(200%);
+            opacity: 0.9;
+            transition: opacity 0.3s ease;
+        }
+        
+        .deco-logo:hover {
+            opacity: 1;
+        }
+        
+        .footer-text {
+            color: #000000;
+            font-size: 1rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+        
+        .deco-link {
+            color: #000000;
+            text-decoration: none;
+            font-weight: 700;
+            position: relative;
+        }
+        
+        .deco-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #000000;
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.3s ease;
+        }
+        
+        .deco-link:hover::after {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+        
+        @media (max-width: 720px) {
+            body {
+                padding: 20px;
+            }
+            
+            .container {
+                padding: 60px 40px;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .url-input-container {
+                flex-direction: column;
+                gap: 16px;
+            }
+            
+            .url-input, .copy-button {
+                width: 100%;
+            }
+            
+            .deco-logo {
+                width: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>This is an <a href="https://modelcontextprotocol.io/introduction" class="mcp-link" target="_blank">MCP</a></h1>
+            <p class="subtitle">Model Context Protocol Server</p>
+        </div>
+        
+        <main class="url-section">
+            <label for="mcp-url">Use in your agents using the following URL:</label>
+            <div class="url-input-container">
+                <input type="text" id="mcp-url" class="url-input" value="${currentUrl}" readonly>
+                <button class="copy-button" onclick="copyUrl()">COPY</button>
+            </div>
+            <div id="success-message" class="success-message">URL COPIED TO CLIPBOARD</div>
+        </main>
+        
+        <section class="tools-section">
+            <h2>AVAILABLE TOOLS</h2>
+            <div class="tools-list">${toolsHtml}</div>
+        </section>
+        
+        <div class="footer">
+            <a href="https://github.com/deco-cx/apps" target="_blank">
+                <img src="https://i.imgur.com/SxsbOMg.png" alt="Deco Logo" class="deco-logo">
+            </a>
+            <p class="footer-text">MCP created with <a href="https://github.com/deco-cx/apps" class="deco-link" target="_blank">deco</a></p>
+        </div>
+    </div>
+
+    <script>
+        async function copyUrl() {
+            const input = document.getElementById('mcp-url');
+            const successMessage = document.getElementById('success-message');
+            
+            try {
+                await navigator.clipboard.writeText(input.value);
+                successMessage.style.display = 'block';
+                successMessage.style.animation = 'fadeIn 0.3s ease';
+                setTimeout(() => {
+                    successMessage.style.display = 'none';
+                }, 3000);
+            } catch (err) {
+                // Fallback for older browsers
+                input.select();
+                document.execCommand('copy');
+                successMessage.style.display = 'block';
+                successMessage.style.animation = 'fadeIn 0.3s ease';
+                setTimeout(() => {
+                    successMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+        
+
+    </script>
+</body>
+</html>`;
+        
+        return new Response(htmlResponse, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+          },
+        });
+      }
+
       // For stateless transport
       const transport = new HttpServerTransport();
       await mcp.server.connect(transport);
