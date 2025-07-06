@@ -343,6 +343,19 @@ export function mcpServer<TManifest extends AppManifest>(
       if (isHTMLRequest) {
         // Return HTML page for browser requests
         const currentUrl = c.req.url;
+        
+        // Get tools data directly
+        const meta = await deco.meta().then((v) => v?.value);
+        const tools = meta ? getTools(new Map<string, string>(), meta.schema, options, meta?.manifest?.blocks?.apps) : [];
+        const toolsHtml = tools.length > 0 
+          ? tools.map((tool: Tool) => `
+              <div class="tool-card">
+                <div class="tool-name">${tool.name}</div>
+                <div class="tool-description">${tool.description || 'No description available'}</div>
+                ${tool.appName ? `<div class="tool-app">${tool.appName}</div>` : ''}
+              </div>
+            `).join('')
+          : '<div class="no-tools">No tools available</div>';
         const htmlResponse = `
 <!DOCTYPE html>
 <html lang="en">
@@ -438,6 +451,105 @@ export function mcpServer<TManifest extends AppManifest>(
         
         .url-section {
             margin-bottom: 60px;
+        }
+        
+        .tools-section {
+            margin-bottom: 60px;
+        }
+        
+        .tools-section h2 {
+            color: #000000;
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+
+        
+        .tools-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .tool-card {
+            border: 2px solid #000000;
+            padding: 24px;
+            background: #ffffff;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: -4px;
+            bottom: -4px;
+            background: #000000;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .tool-card:hover::before {
+            opacity: 1;
+        }
+        
+        .tool-card:hover {
+            transform: translate(-4px, -4px);
+        }
+        
+        .tool-card:hover .tool-name {
+            color: #ffffff;
+        }
+        
+        .tool-card:hover .tool-description {
+            color: #cccccc;
+        }
+        
+        .tool-card:hover .tool-app {
+            color: #000000;
+            background: #ffffff;
+        }
+        
+        .tool-name {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        
+        .tool-description {
+            color: #666666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        
+        .tool-app {
+            font-size: 0.8rem;
+            color: #000000;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 1px solid #000000;
+            padding: 4px 8px;
+            display: inline-block;
+            background: #f5f5f5;
+        }
+        
+        .no-tools {
+            text-align: center;
+            color: #666666;
+            font-style: italic;
+            padding: 40px;
         }
         
         .url-section label {
@@ -597,7 +709,7 @@ export function mcpServer<TManifest extends AppManifest>(
 <body>
     <div class="container">
         <div class="header">
-            <h1>This is a <a href="https://modelcontextprotocol.io/introduction" class="mcp-link" target="_blank">MCP</a></h1>
+            <h1>This is an <a href="https://modelcontextprotocol.io/introduction" class="mcp-link" target="_blank">MCP</a></h1>
             <p class="subtitle">Model Context Protocol Server</p>
         </div>
         
@@ -609,6 +721,11 @@ export function mcpServer<TManifest extends AppManifest>(
             </div>
             <div id="success-message" class="success-message">URL COPIED TO CLIPBOARD</div>
         </main>
+        
+        <section class="tools-section">
+            <h2>AVAILABLE TOOLS</h2>
+            <div class="tools-list">${toolsHtml}</div>
+        </section>
         
         <div class="footer">
             <a href="https://github.com/deco-cx/apps" target="_blank">
@@ -641,6 +758,8 @@ export function mcpServer<TManifest extends AppManifest>(
                 }, 3000);
             }
         }
+        
+
     </script>
 </body>
 </html>`;
