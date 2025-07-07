@@ -342,7 +342,7 @@ export function mcpServer<TManifest extends AppManifest>(
       
       if (isHTMLRequest) {
         // Return HTML page for browser requests
-        const currentUrl = c.req.url;
+        const currentUrl = c.req.url.replace(/^http:/, 'https:');
         
         // Get tools data directly
         const meta = await deco.meta().then((v) => v?.value);
