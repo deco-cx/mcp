@@ -44,13 +44,21 @@ export function dereferenceSchema(
 
   const result: JSONSchema7 = { ...schema };
 
-  // Handle arrays with items
+  // Handle arrays with items (including tuple types)
   if (result.type === "array" && result.items) {
-    result.items = dereferenceSchema(
-      result.items as JSONSchema7,
-      definitions,
-      visited,
-    ) as JSONSchema7;
+    if (Array.isArray(result.items)) {
+      // Handle tuple types
+      result.items = result.items.map((item) =>
+        dereferenceSchema(item as JSONSchema7, definitions, visited)
+      ).filter(Boolean) as JSONSchema7[];
+    } else {
+      // Handle single item schema
+      result.items = dereferenceSchema(
+        result.items as JSONSchema7,
+        definitions,
+        visited,
+      ) as JSONSchema7;
+    }
   }
 
   // Handle and merge allOf into the main schema
@@ -141,6 +149,8 @@ export function dereferenceSchema(
 }
 
 function idFromDefinition(definition: string): string {
-  const [_, __, id] = definition.split("/");
-  return id;
+  // Handle complex definition patterns like:
+  // "#/definitions/ZmlsZTovLy9hcHAvZGVjby9jbGllbnRzL3BsYXVzaWJsZS52Mi50cw==@FilterOperator"
+  // Just remove the "#/definitions/" prefix and return the rest
+  return definition.replace("#/definitions/", "");
 }

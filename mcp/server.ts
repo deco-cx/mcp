@@ -339,22 +339,33 @@ export function mcpServer<TManifest extends AppManifest>(
       // Check if this is a browser request (HTML acceptance)
       const acceptHeader = c.req.header("accept") || "";
       const isHTMLRequest = acceptHeader.includes("text/html");
-      
+
       if (isHTMLRequest) {
         // Return HTML page for browser requests
-        const currentUrl = c.req.url.replace(/^http:/, 'https:');
-        
+        const currentUrl = c.req.url.replace(/^http:/, "https:");
+
         // Get tools data directly
         const meta = await deco.meta().then((v) => v?.value);
-        const tools = meta ? getTools(new Map<string, string>(), meta.schema, options, meta?.manifest?.blocks?.apps) : [];
-        const toolsHtml = tools.length > 0 
+        const tools = meta
+          ? getTools(
+            new Map<string, string>(),
+            meta.schema,
+            options,
+            meta?.manifest?.blocks?.apps,
+          )
+          : [];
+        const toolsHtml = tools.length > 0
           ? tools.map((tool: Tool) => `
               <div class="tool-card">
                 <div class="tool-name">${tool.name}</div>
-                <div class="tool-description">${tool.description || 'No description available'}</div>
-                ${tool.appName ? `<div class="tool-app">${tool.appName}</div>` : ''}
+                <div class="tool-description">${
+            tool.description || "No description available"
+          }</div>
+                ${
+            tool.appName ? `<div class="tool-app">${tool.appName}</div>` : ""
+          }
               </div>
-            `).join('')
+            `).join("")
           : '<div class="no-tools">No tools available</div>';
         const htmlResponse = `
 <!DOCTYPE html>
@@ -763,7 +774,7 @@ export function mcpServer<TManifest extends AppManifest>(
     </script>
 </body>
 </html>`;
-        
+
         return new Response(htmlResponse, {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
