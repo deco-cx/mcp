@@ -192,7 +192,8 @@ export const getTools = <TManifest extends AppManifest>(
       return {
         name: toolName,
         resolveType,
-        appName: apps?.[resolveType]?.namespace,
+        appName: (funcDefinition as { appName?: string })?.appName ??
+          apps?.[resolveType]?.namespace,
         description: funcDefinition.description ?? inputSchema?.description ??
           resolveType,
         icon,
