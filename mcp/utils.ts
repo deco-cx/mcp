@@ -39,6 +39,8 @@ export function dereferenceSchema(
         definitions,
         visited,
       ),
+      title: originalMetadata.title || referencedSchema.title,
+      description: originalMetadata.description || referencedSchema.description,
     };
   }
 
