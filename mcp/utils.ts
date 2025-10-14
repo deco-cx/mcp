@@ -31,6 +31,10 @@ export function dereferenceSchema(
     // Save the original schema metadata (excluding $ref)
     const { $ref: _, ...originalMetadata } = schema;
 
+    const description =
+      (originalMetadata.description ?? "") ||
+      (referencedSchema.description ?? "");
+
     // Merge the original metadata with the dereferenced schema
     return {
       ...originalMetadata,
@@ -40,7 +44,7 @@ export function dereferenceSchema(
         visited,
       ),
       title: originalMetadata.title || referencedSchema.title,
-      description: originalMetadata.description || referencedSchema.description,
+      ...(description && { description }),
     };
   }
 
@@ -50,9 +54,11 @@ export function dereferenceSchema(
   if (result.type === "array" && result.items) {
     if (Array.isArray(result.items)) {
       // Handle tuple types
-      result.items = result.items.map((item) =>
-        dereferenceSchema(item as JSONSchema7, definitions, visited)
-      ).filter(Boolean) as JSONSchema7[];
+      result.items = result.items
+        .map((item) =>
+          dereferenceSchema(item as JSONSchema7, definitions, visited),
+        )
+        .filter(Boolean) as JSONSchema7[];
     } else {
       // Handle single item schema
       result.items = dereferenceSchema(
@@ -66,12 +72,13 @@ export function dereferenceSchema(
   // Handle and merge allOf into the main schema
   if (result.allOf && Array.isArray(result.allOf) && result.allOf.length > 0) {
     // First dereference all schemas in allOf
-    const dereferencedAllOf = result.allOf.map((subSchema: any) =>
-      dereferenceSchema(
-        subSchema as JSONSchema7,
-        definitions,
-        visited,
-      ) as JSONSchema7
+    const dereferencedAllOf = result.allOf.map(
+      (subSchema: any) =>
+        dereferenceSchema(
+          subSchema as JSONSchema7,
+          definitions,
+          visited,
+        ) as JSONSchema7,
     );
 
     // Merge all properties from allOf schemas into the main schema
@@ -86,10 +93,7 @@ export function dereferenceSchema(
 
       // Merge required fields if they exist
       if (subSchema.required && Array.isArray(subSchema.required)) {
-        result.required = [
-          ...(result.required || []),
-          ...subSchema.required,
-        ];
+        result.required = [...(result.required || []), ...subSchema.required];
       }
     }
 
@@ -103,22 +107,14 @@ export function dereferenceSchema(
   // Handle anyOf
   if (result.anyOf) {
     result.anyOf = result.anyOf.map((subSchema: any) =>
-      dereferenceSchema(
-        subSchema as JSONSchema7,
-        definitions,
-        visited,
-      )
+      dereferenceSchema(subSchema as JSONSchema7, definitions, visited),
     ) as JSONSchema7[];
   }
 
   // Handle oneOf
   if (result.oneOf) {
     result.oneOf = result.oneOf.map((subSchema: any) =>
-      dereferenceSchema(
-        subSchema as JSONSchema7,
-        definitions,
-        visited,
-      )
+      dereferenceSchema(subSchema as JSONSchema7, definitions, visited),
     ) as JSONSchema7[];
   }
 
