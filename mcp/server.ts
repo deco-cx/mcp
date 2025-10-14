@@ -279,11 +279,16 @@ function registerTools<TManifest extends AppManifest>(
         state,
       );
 
+      const resultOrEmpty = result ?? {};
+
       return {
-        content: [{ type: "text" as const, text: JSON.stringify(result) }],
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify(resultOrEmpty),
+        }],
         isError: false,
         // deno-lint-ignore no-explicit-any
-        structuredContent: result as any,
+        structuredContent: resultOrEmpty as any,
       };
     } catch (err) {
       console.error(err);

@@ -31,8 +31,7 @@ export function dereferenceSchema(
     // Save the original schema metadata (excluding $ref)
     const { $ref: _, ...originalMetadata } = schema;
 
-    const description =
-      (originalMetadata?.description ?? "") ||
+    const description = (originalMetadata?.description ?? "") ||
       (referencedSchema?.description ?? "");
 
     // Merge the original metadata with the dereferenced schema
@@ -56,7 +55,7 @@ export function dereferenceSchema(
       // Handle tuple types
       result.items = result.items
         .map((item) =>
-          dereferenceSchema(item as JSONSchema7, definitions, visited),
+          dereferenceSchema(item as JSONSchema7, definitions, visited)
         )
         .filter(Boolean) as JSONSchema7[];
     } else {
@@ -107,14 +106,14 @@ export function dereferenceSchema(
   // Handle anyOf
   if (result.anyOf) {
     result.anyOf = result.anyOf.map((subSchema: any) =>
-      dereferenceSchema(subSchema as JSONSchema7, definitions, visited),
+      dereferenceSchema(subSchema as JSONSchema7, definitions, visited)
     ) as JSONSchema7[];
   }
 
   // Handle oneOf
   if (result.oneOf) {
     result.oneOf = result.oneOf.map((subSchema: any) =>
-      dereferenceSchema(subSchema as JSONSchema7, definitions, visited),
+      dereferenceSchema(subSchema as JSONSchema7, definitions, visited)
     ) as JSONSchema7[];
   }
 
