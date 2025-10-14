@@ -32,8 +32,8 @@ export function dereferenceSchema(
     const { $ref: _, ...originalMetadata } = schema;
 
     const description =
-      (originalMetadata.description ?? "") ||
-      (referencedSchema.description ?? "");
+      (originalMetadata?.description ?? "") ||
+      (referencedSchema?.description ?? "");
 
     // Merge the original metadata with the dereferenced schema
     return {
