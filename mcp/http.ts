@@ -20,7 +20,7 @@ export class HttpServerTransport extends StreamableHTTPServerTransport {
 
   async handleMessage(req: Request): Promise<Response> {
     const { req: nodeReq, res } = toReqRes(req);
-    super.handleRequest(nodeReq, res, await req.json().catch(() => null));
+    super.handleRequest(nodeReq, res, req.method === "GET" ? null : await req.json().catch(() => null));
     return toFetchResponse(res);
   }
 }
