@@ -294,6 +294,10 @@ function registerTools<TManifest extends AppManifest>(
       console.error(err);
 
       return {
+        content: [{
+          type: "text" as const,
+          text: err instanceof Error ? err.message : `${err}`,
+        }],
         isError: true,
         structuredContent: {
           status: typeof err === "object" && err !== null && "status" in err
