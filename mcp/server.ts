@@ -800,7 +800,12 @@ export function mcpServer<TManifest extends AppManifest>(
       });
 
       const response = await handleMessage();
-      transport.close(); // Close the transport after handling the message
+      
+      // Do not close transport on GET requests (SSE may require longer connections)
+      if (c.req.method !== "GET") {
+        transport.close();
+      }
+      
       return response;
     }
     await next();
