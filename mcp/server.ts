@@ -135,6 +135,8 @@ export const getTools = <TManifest extends AppManifest>(
         ? schemas.definitions[idFromDefinition(ref)]
         : undefined;
 
+      console.log("INPUT SCHEMA", rawInputSchema);
+
       // Dereference the input schema
       const inputSchema = rawInputSchema
         ? dereferenceSchema(
